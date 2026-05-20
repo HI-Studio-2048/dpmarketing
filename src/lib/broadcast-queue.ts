@@ -31,16 +31,22 @@ export async function enqueueBroadcast(
   broadcastId: string,
   segmentStatus: string | undefined
 ): Promise<number> {
-  let query = supabase
-    .from("leads")
-    .select("id, email, first_name")
-    .eq("unsubscribed", false);
-  if (segmentStatus) query = query.eq("status", segmentStatus);
+  const pageSize = 1000;
+  const leads: Array<{ id: string; email: string; first_name: string | null }> = [];
+  for (let from = 0; ; from += pageSize) {
+    let query = supabase
+      .from("leads")
+      .select("id, email, first_name")
+      .eq("unsubscribed", false);
+    if (segmentStatus) query = query.eq("status", segmentStatus);
+    const { data, error } = await query.range(from, from + pageSize - 1);
+    if (error) throw new Error(`enqueue: failed to read leads: ${error.message}`);
+    if (!data?.length) break;
+    leads.push(...data);
+    if (data.length < pageSize) break;
+  }
 
-  const { data: leads, error } = await query;
-  if (error) throw new Error(`enqueue: failed to read leads: ${error.message}`);
-
-  const rows = (leads || []).map((l: { id: string; email: string; first_name: string | null }) => ({
+  const rows = leads.map((l: { id: string; email: string; first_name: string | null }) => ({
     broadcast_id: broadcastId,
     lead_id: l.id,
     email: l.email,

@@ -135,7 +135,7 @@ export default function ComposerPage() {
               <div
                 className="h-2 rounded bg-green-600"
                 style={{
-                  width: `${progress.total ? (progress.counts.sent / progress.total) * 100 : 0}%`,
+                  width: `${progress.total ? ((progress.counts.sent + progress.counts.failed) / progress.total) * 100 : 0}%`,
                 }}
               />
             </div>

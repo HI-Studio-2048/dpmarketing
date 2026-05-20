@@ -10,10 +10,32 @@ interface Row {
   status?: string;
 }
 
+function splitCsvLine(line: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; }
+        else inQuotes = false;
+      } else cur += ch;
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ",") {
+      out.push(cur);
+      cur = "";
+    } else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
 function parseCsv(text: string): Row[] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
   if (lines.length === 0) return [];
-  const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
+  const headers = splitCsvLine(lines[0]).map((h) => h.trim().toLowerCase());
   const idx = (name: string) => headers.indexOf(name);
   const ei = idx("email");
   const fi = idx("first_name");
@@ -21,7 +43,7 @@ function parseCsv(text: string): Row[] {
   const si = idx("status");
   const rows: Row[] = [];
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(",");
+    const cols = splitCsvLine(lines[i]);
     const email = (cols[ei] || "").trim();
     if (!email) continue;
     rows.push({
