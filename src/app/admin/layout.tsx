@@ -21,6 +21,7 @@ export default function AdminLayout({
   const navItems = [
     { label: "Dashboard", href: "/admin" },
     { label: "Leads", href: "/admin/leads" },
+    { label: "Import", href: "/admin/import" },
     { label: "Sequences", href: "/admin/sequences" },
     { label: "Composer", href: "/admin/composer" },
     { label: "Analytics", href: "/admin/analytics" },
