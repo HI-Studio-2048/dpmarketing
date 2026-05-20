@@ -85,6 +85,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ received: true });
     }
 
+    // This Resend account is shared with other projects (e.g. dr-jasper), and
+    // Resend webhooks are account-level — so this endpoint also receives events
+    // for emails this project never sent. Only act on events whose email_id
+    // matches a row we logged; otherwise ignore (prevents cross-project
+    // unsubscribes and stray status writes).
+    const { data: ownLogs } = await supabase
+      .from("email_logs")
+      .select("id")
+      .eq("resend_id", data.email_id)
+      .limit(1);
+
+    if (!ownLogs || ownLogs.length === 0) {
+      return NextResponse.json({ received: true, ignored: true });
+    }
+
     // Update the email_logs record
     const updateData: Record<string, unknown> = { status: newStatus };
 
