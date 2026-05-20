@@ -109,7 +109,7 @@ export default function AnalyticsPage() {
       <div className="mt-8 rounded-lg bg-blue-50 border border-blue-200 p-6">
         <h2 className="font-bold text-blue-900">💡 Demo Mode</h2>
         <p className="mt-2 text-sm text-blue-800">
-          You're viewing mock analytics data. Real data will appear once you set up
+          You&apos;re viewing mock analytics data. Real data will appear once you set up
           Supabase and start sending emails.
         </p>
       </div>

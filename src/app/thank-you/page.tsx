@@ -26,7 +26,7 @@ export default function ThankYouPage() {
               Welcome to Your Scent Journey
             </h1>
             <p className="mb-6 text-slate-600">
-              We've matched you with the perfect fragrance and sent everything to your email.
+              We&apos;ve matched you with the perfect fragrance and sent everything to your email.
             </p>
 
             {/* Scent Match */}

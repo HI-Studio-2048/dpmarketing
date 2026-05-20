@@ -34,7 +34,7 @@ export default function Home() {
             </h1>
             <p className="mt-4 text-xl text-slate-400">
               Our perfume oils are crafted for those who understand that fragrance
-              is more than a scent—it's an expression of self.
+              is more than a scent&mdash;it&apos;s an expression of self.
             </p>
           </div>
 
