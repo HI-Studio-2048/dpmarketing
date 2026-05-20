@@ -1,40 +1,32 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Users, Zap, Mail, TrendingUp, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Users, Zap, Mail, TrendingUp, ArrowUpRight } from "lucide-react";
 
 interface DashboardStats {
   totalLeads: number;
   activeSequences: number;
-  emailsSent: number;
+  totalEmails: number;
   openRate: number;
 }
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<DashboardStats>({
-    totalLeads: 0,
-    activeSequences: 0,
-    emailsSent: 0,
-    openRate: 0,
-  });
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchStats() {
       try {
-        const [leadsRes, analyticsRes] = await Promise.all([
-          fetch("/api/admin/leads?limit=1"),
-          fetch("/api/admin/analytics"),
-        ]);
-        const leadsData = await leadsRes.json();
-        const analyticsData = await analyticsRes.json();
-
-        setStats({
-          totalLeads: leadsData.total || 0,
-          activeSequences: 1,
-          emailsSent: analyticsData.totalEmails || 0,
-          openRate: analyticsData.openRate || 0,
-        });
+        const res = await fetch("/api/admin/analytics");
+        if (res.ok) {
+          const data = await res.json();
+          setStats({
+            totalLeads: data.totalLeads || 0,
+            activeSequences: data.activeSequences || 0,
+            totalEmails: data.totalEmails || 0,
+            openRate: data.openRate || 0,
+          });
+        }
       } catch {
         // Fallback
       } finally {
@@ -47,36 +39,28 @@ export default function AdminDashboard() {
   const statCards = [
     {
       label: "Total Leads",
-      value: loading ? "..." : stats.totalLeads.toLocaleString(),
-      change: "+24%",
-      trend: "up" as const,
+      value: loading ? "..." : (stats?.totalLeads ?? 0).toLocaleString(),
       icon: Users,
       color: "from-blue-500 to-blue-600",
       shadowColor: "shadow-blue-500/20",
     },
     {
       label: "Emails Sent",
-      value: loading ? "..." : stats.emailsSent.toLocaleString(),
-      change: "+14%",
-      trend: "up" as const,
+      value: loading ? "..." : (stats?.totalEmails ?? 0).toLocaleString(),
       icon: Mail,
       color: "from-green-500 to-emerald-600",
       shadowColor: "shadow-green-500/20",
     },
     {
       label: "Open Rate",
-      value: loading ? "..." : `${stats.openRate}%`,
-      change: "-2%",
-      trend: "down" as const,
+      value: loading ? "..." : `${stats?.openRate ?? 0}%`,
       icon: TrendingUp,
       color: "from-orange-400 to-orange-500",
       shadowColor: "shadow-orange-500/20",
     },
     {
       label: "Active Sequences",
-      value: loading ? "..." : stats.activeSequences.toString(),
-      change: "+18%",
-      trend: "up" as const,
+      value: loading ? "..." : (stats?.activeSequences ?? 0).toString(),
       icon: Zap,
       color: "from-purple-500 to-violet-600",
       shadowColor: "shadow-purple-500/20",
@@ -126,25 +110,6 @@ export default function AdminDashboard() {
                 <card.icon size={22} className="text-white" />
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-1.5">
-              {card.trend === "up" ? (
-                <ArrowUpRight size={14} className="text-[var(--accent-green)]" />
-              ) : (
-                <ArrowDownRight size={14} className="text-[var(--accent-red)]" />
-              )}
-              <span
-                className={`text-xs font-medium ${
-                  card.trend === "up"
-                    ? "text-[var(--accent-green)]"
-                    : "text-[var(--accent-red)]"
-                }`}
-              >
-                {card.change}
-              </span>
-              <span className="text-xs text-[var(--text-muted)]">
-                vs last month
-              </span>
-            </div>
           </div>
         ))}
       </div>
@@ -184,10 +149,10 @@ export default function AdminDashboard() {
           </h2>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: "New Broadcast", href: "/admin/composer", color: "from-blue-500 to-blue-600" },
-              { label: "View Leads", href: "/admin/leads", color: "from-green-500 to-emerald-600" },
-              { label: "Sequences", href: "/admin/sequences", color: "from-orange-400 to-orange-500" },
-              { label: "Analytics", href: "/admin/analytics", color: "from-purple-500 to-violet-600" },
+              { label: "New Broadcast", href: "/admin/composer" },
+              { label: "View Leads", href: "/admin/leads" },
+              { label: "Sequences", href: "/admin/sequences" },
+              { label: "Analytics", href: "/admin/analytics" },
             ].map((action) => (
               <a
                 key={action.label}

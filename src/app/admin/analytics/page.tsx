@@ -7,61 +7,53 @@ interface Analytics {
   totalEmails: number;
   openedEmails: number;
   clickedEmails: number;
+  bouncedEmails: number;
+  failedEmails: number;
+  complainedEmails: number;
   unsubscribed: number;
+  totalLeads: number;
+  activeSequences: number;
   openRate: number;
   clickRate: number;
-  isMock?: boolean;
+  bounceRate: number;
+  deliveryRate: number;
 }
 
 export default function AnalyticsPage() {
-  const [analytics, setAnalytics] = useState<Analytics>({
-    totalEmails: 0,
-    openedEmails: 0,
-    clickedEmails: 0,
-    unsubscribed: 0,
-    openRate: 0,
-    clickRate: 0,
-    isMock: false,
-  });
+  const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    async function fetchAnalytics() {
+      try {
+        const response = await fetch("/api/admin/analytics");
+        if (response.ok) {
+          const data = await response.json();
+          setAnalytics(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch analytics:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
     fetchAnalytics();
   }, []);
-
-  async function fetchAnalytics() {
-    setLoading(true);
-    try {
-      const hasSupabase =
-        !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
-        !!process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-      if (!hasSupabase) {
-        setAnalytics({
-          totalEmails: 1250,
-          openedEmails: 425,
-          clickedEmails: 187,
-          unsubscribed: 12,
-          openRate: 34,
-          clickRate: 15,
-          isMock: true,
-        });
-      } else {
-        const response = await fetch("/api/admin/analytics");
-        const data = await response.json();
-        setAnalytics(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch analytics:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   if (loading) {
     return (
       <div className="text-sm text-[var(--text-secondary)]">
         Loading analytics...
+      </div>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-8 text-center">
+        <p className="text-sm text-[var(--text-secondary)]">
+          Could not load analytics. Check your Supabase connection.
+        </p>
       </div>
     );
   }
@@ -94,7 +86,7 @@ export default function AnalyticsPage() {
     {
       label: "Unsubscribed",
       value: analytics.unsubscribed.toString(),
-      sub: "total",
+      sub: `of ${analytics.totalLeads} leads`,
       icon: UserMinus,
       color: "from-red-400 to-red-500",
       shadowColor: "shadow-red-500/20",
@@ -103,20 +95,13 @@ export default function AnalyticsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-[var(--text-primary)]">
-            Analytics
-          </h1>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Email campaign performance
-          </p>
-        </div>
-        {analytics.isMock && (
-          <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-400">
-            Mock Data
-          </span>
-        )}
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold text-[var(--text-primary)]">
+          Analytics
+        </h1>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Email campaign performance
+        </p>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
@@ -157,7 +142,7 @@ export default function AnalyticsPage() {
             {[
               {
                 label: "Delivered",
-                pct: analytics.totalEmails > 0 ? 98 : 0,
+                pct: analytics.deliveryRate,
                 color: "bg-green-500",
               },
               {
@@ -172,7 +157,7 @@ export default function AnalyticsPage() {
               },
               {
                 label: "Bounced",
-                pct: analytics.totalEmails > 0 ? 2 : 0,
+                pct: analytics.bounceRate,
                 color: "bg-red-500",
               },
             ].map((item) => (
@@ -213,6 +198,18 @@ export default function AnalyticsPage() {
               {
                 label: "Links Clicked",
                 value: analytics.clickedEmails.toLocaleString(),
+              },
+              {
+                label: "Bounced",
+                value: analytics.bouncedEmails.toLocaleString(),
+              },
+              {
+                label: "Failed",
+                value: analytics.failedEmails.toLocaleString(),
+              },
+              {
+                label: "Spam Complaints",
+                value: analytics.complainedEmails.toLocaleString(),
               },
               {
                 label: "Unsubscribes",
