@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Read(//Users/danielsv/.claude/**)",
-      "Bash(npx create-next-app@latest . --typescript --tailwind --app --eslint --import-alias '@/*' --skip-git)"
+      "Bash(npx create-next-app@latest . --typescript --tailwind --app --eslint --import-alias '@/*' --skip-git)",
+      "Bash(npm install:*)"
     ],
     "additionalDirectories": [
       "/Users/danielsv/.claude",
