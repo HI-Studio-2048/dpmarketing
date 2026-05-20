@@ -134,6 +134,7 @@ create table public.broadcast_recipients (
     status       text not null default 'pending',  -- pending | sending | sent | failed
     attempts     integer not null default 0,
     error        text,
+    claimed_at   timestamptz,                       -- when the row last entered 'sending'
     sent_at      timestamptz,
     created_at   timestamptz not null default now(),
     unique (broadcast_id, email)
@@ -165,7 +166,7 @@ language plpgsql as $$
 begin
     return query
     update public.broadcast_recipients r
-       set status = 'sending', attempts = r.attempts + 1
+       set status = 'sending', attempts = r.attempts + 1, claimed_at = now()
      where r.id in (
          select id from public.broadcast_recipients
           where status = 'pending'
@@ -184,5 +185,5 @@ language sql as $$
     update public.broadcast_recipients
        set status = 'pending'
      where status = 'sending'
-       and created_at < now() - (p_older_than_minutes || ' minutes')::interval;
+       and claimed_at < now() - (p_older_than_minutes || ' minutes')::interval;
 $$;
