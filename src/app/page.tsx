@@ -2,21 +2,23 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <main className="min-h-screen bg-white">
       {/* Header */}
-      <header className="border-b border-slate-700/50 bg-slate-900/50 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <h1 className="text-xl font-bold text-white">✨ DanielPhilip</h1>
-          <div className="flex gap-4">
+      <header className="border-b border-[#121212]/10">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
+          <Link href="/" className="text-lg tracking-[0.2em] uppercase text-[#121212]">
+            Daniel Philip
+          </Link>
+          <div className="flex gap-8">
             <Link
               href="/quiz"
-              className="text-sm text-slate-300 hover:text-white"
+              className="text-sm tracking-wider uppercase text-[#121212]/60 hover:text-[#121212]"
             >
               Quiz
             </Link>
             <Link
               href="/admin-login"
-              className="text-sm text-slate-300 hover:text-white"
+              className="text-sm tracking-wider uppercase text-[#121212]/60 hover:text-[#121212]"
             >
               Admin
             </Link>
@@ -25,61 +27,51 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <section className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center px-6 py-12 text-center">
-        <div className="mx-auto max-w-2xl space-y-6">
-          <div>
-            <div className="mb-4 text-6xl">🌹</div>
-            <h1 className="text-5xl font-bold text-white">
-              Discover Your Signature Scent
-            </h1>
-            <p className="mt-4 text-xl text-slate-400">
-              Our perfume oils are crafted for those who understand that fragrance
-              is more than a scent&mdash;it&apos;s an expression of self.
-            </p>
-          </div>
+      <section className="flex min-h-[calc(100vh-80px)] flex-col items-center justify-center px-6 py-24 text-center">
+        <div className="mx-auto max-w-xl space-y-8">
+          <h1 className="text-5xl font-light tracking-tight text-[#121212]">
+            Discover Your<br />Signature Scent
+          </h1>
+          <p className="text-lg font-light text-[#121212]/60">
+            Perfume oils crafted for those who understand that fragrance
+            is more than a scent&mdash;it&apos;s an expression of self.
+          </p>
 
-          <div className="pt-6">
+          <div className="pt-4">
             <Link
               href="/quiz"
-              className="inline-block rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-8 py-4 font-bold text-white hover:from-amber-600 hover:to-amber-700"
+              className="inline-block border border-[#121212] bg-[#121212] px-10 py-4 text-sm tracking-wider uppercase text-white hover:bg-white hover:text-[#121212]"
             >
-              Start the Quiz →
+              Take the Quiz
             </Link>
-            <p className="mt-3 text-sm text-slate-500">
-              Takes 5 minutes • Zero commitment
-            </p>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="border-t border-slate-700/50 bg-slate-800/30 px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <h2 className="mb-12 text-center text-3xl font-bold text-white">
-            Why Our Oils?
-          </h2>
+      {/* Divider */}
+      <div className="mx-auto max-w-16 border-t border-[#121212]/20" />
 
-          <div className="grid gap-8 md:grid-cols-3">
-            <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-6">
-              <div className="mb-3 text-3xl">🌿</div>
-              <h3 className="mb-2 text-lg font-bold text-white">100% Pure</h3>
-              <p className="text-slate-400">
+      {/* Features Section */}
+      <section className="px-6 py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-0 border border-[#121212]/10 md:grid-cols-3">
+            <div className="border-b border-[#121212]/10 p-10 md:border-b-0 md:border-r">
+              <h3 className="mb-3 text-sm tracking-wider uppercase text-[#121212]">100% Pure</h3>
+              <p className="text-sm font-light leading-relaxed text-[#121212]/60">
                 No fillers, no synthetics. Just pure, concentrated fragrance oils.
               </p>
             </div>
 
-            <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-6">
-              <div className="mb-3 text-3xl">⏰</div>
-              <h3 className="mb-2 text-lg font-bold text-white">Long-lasting</h3>
-              <p className="text-slate-400">
+            <div className="border-b border-[#121212]/10 p-10 md:border-b-0 md:border-r">
+              <h3 className="mb-3 text-sm tracking-wider uppercase text-[#121212]">Long-lasting</h3>
+              <p className="text-sm font-light leading-relaxed text-[#121212]/60">
                 A little goes a long way. Our oils last 12+ hours on skin.
               </p>
             </div>
 
-            <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-6">
-              <div className="mb-3 text-3xl">🎯</div>
-              <h3 className="mb-2 text-lg font-bold text-white">Personalized</h3>
-              <p className="text-slate-400">
+            <div className="p-10">
+              <h3 className="mb-3 text-sm tracking-wider uppercase text-[#121212]">Personalized</h3>
+              <p className="text-sm font-light leading-relaxed text-[#121212]/60">
                 We help you find the perfect scent that matches your personality.
               </p>
             </div>
@@ -88,16 +80,17 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="px-6 py-20">
-        <div className="mx-auto max-w-2xl rounded-xl border border-amber-500/30 bg-gradient-to-br from-slate-800 to-slate-900 p-8 text-center">
-          <h2 className="mb-4 text-2xl font-bold text-white">Ready to find your scent?</h2>
-          <p className="mb-6 text-slate-400">
-            Take our quick fragrance quiz and get a personalized recommendation
-            based on your unique style and preferences.
+      <section className="bg-[#121212] px-6 py-24 text-center">
+        <div className="mx-auto max-w-xl">
+          <h2 className="mb-4 text-3xl font-light text-white">
+            Ready to find your scent?
+          </h2>
+          <p className="mb-8 text-sm font-light text-white/60">
+            5 questions. Your perfect match. Zero commitment.
           </p>
           <Link
             href="/quiz"
-            className="inline-block rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-8 py-3 font-bold text-white hover:from-amber-600 hover:to-amber-700"
+            className="inline-block border border-white bg-white px-10 py-4 text-sm tracking-wider uppercase text-[#121212] hover:bg-transparent hover:text-white"
           >
             Start Quiz
           </Link>
@@ -105,14 +98,14 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-700/50 bg-slate-900/50 px-6 py-8 text-center text-sm text-slate-500">
-        <p>
-          Questions? DM{" "}
+      <footer className="border-t border-[#121212]/10 px-6 py-10 text-center">
+        <p className="text-xs tracking-wider uppercase text-[#121212]/40">
+          DM{" "}
           <a
             href="https://instagram.com/its.danielphilip"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-amber-500 hover:text-amber-400"
+            className="text-[#121212]/60 hover:text-[#121212]"
           >
             @its.danielphilip
           </a>{" "}

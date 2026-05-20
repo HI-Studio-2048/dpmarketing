@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -34,48 +35,49 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50">
-      <div className="w-full max-w-md">
-        <div className="rounded-lg bg-white p-8 shadow">
-          <h1 className="mb-6 text-center text-2xl font-bold">
-            Marketing Dashboard
-          </h1>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-slate-700"
-              >
-                Admin Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full rounded border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
-                placeholder="Enter your password"
-                disabled={loading}
-                autoFocus
-              />
-            </div>
-
-            {error && (
-              <div className="rounded bg-red-50 p-3 text-sm text-red-700">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:bg-slate-400"
-            >
-              {loading ? "Signing in..." : "Sign In"}
-            </button>
-          </form>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-white px-4">
+      <div className="w-full max-w-sm">
+        <div className="mb-10 text-center">
+          <Link href="/" className="text-lg tracking-[0.2em] uppercase text-[#121212]">
+            Daniel Philip
+          </Link>
+          <p className="mt-3 text-xs tracking-wider uppercase text-[#121212]/40">
+            Admin Access
+          </p>
         </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label
+              htmlFor="password"
+              className="mb-2 block text-xs tracking-wider uppercase text-[#121212]/60"
+            >
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border-b border-[#121212]/20 bg-transparent py-3 text-sm text-[#121212] placeholder:text-[#121212]/30 focus:border-[#121212] focus:outline-none"
+              placeholder="Enter your password"
+              disabled={loading}
+              autoFocus
+            />
+          </div>
+
+          {error && (
+            <p className="text-sm text-red-600">{error}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full border border-[#121212] bg-[#121212] px-6 py-3 text-sm tracking-wider uppercase text-white hover:bg-white hover:text-[#121212] disabled:opacity-30"
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700&display=swap');
 
 * {
   margin: 0;
@@ -7,5 +8,7 @@
 }
 
 body {
-  @apply bg-white text-slate-900;
+  font-family: 'Assistant', sans-serif;
+  color: #121212;
+  background: #ffffff;
 }
