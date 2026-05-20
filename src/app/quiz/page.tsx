@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface Scent {
   name: string;
@@ -119,6 +120,7 @@ function calculateMatch(answers: Record<string, string>): string {
 }
 
 export default function QuizPage() {
+  const router = useRouter();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [name, setName] = useState("");
@@ -156,12 +158,13 @@ export default function QuizPage() {
           quiz_answers: answers,
           quiz_score: Object.values(answers).length,
           quiz_progress: "5/5",
-          tags: ["quiz", "perfume", scentMatch],
+          tags: ["quiz", "perfume", scentKey],
         }),
       });
 
       if (response.ok) {
-        setStep(7); // Move to results
+        // Redirect to thank you page
+        router.push(`/thank-you?scent=${scentKey}`);
       } else {
         setError("Failed to submit. Please try again.");
       }
@@ -337,56 +340,6 @@ export default function QuizPage() {
         </div>
       )}
 
-      {/* Step 7: Results */}
-      {step === 7 && (
-        <div className="w-full max-w-lg space-y-6">
-          {/* Scent Match Card */}
-          <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-slate-800 to-slate-900 p-8 text-white shadow-2xl">
-            <div className="mb-4 text-center">
-              <div className="mb-3 text-6xl">{SCENTS[scentMatch].emoji}</div>
-              <h1 className="mb-2 text-3xl font-bold">
-                {SCENTS[scentMatch].name}
-              </h1>
-            </div>
-
-            <p className="mb-6 text-center text-slate-300">
-              {SCENTS[scentMatch].description}
-            </p>
-
-            <button
-              onClick={() => alert("Coming soon! Shop your scent.")}
-              className="w-full rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-3 font-bold text-white hover:from-amber-600 hover:to-amber-700"
-            >
-              Shop {SCENTS[scentMatch].name} →
-            </button>
-          </div>
-
-          {/* Instagram DM CTA */}
-          <div className="rounded-2xl bg-gradient-to-r from-purple-900 to-pink-900 p-8 text-center text-white shadow-2xl">
-            <div className="mb-3 text-3xl">📱</div>
-            <h3 className="mb-2 text-xl font-bold">
-              Want a personal recommendation?
-            </h3>
-            <p className="mb-6 text-slate-300">
-              DM @its.danielphilip on Instagram with your scent match to get a
-              personalized offer
-            </p>
-            <a
-              href="https://instagram.com/its.danielphilip"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block rounded-lg bg-white px-6 py-3 font-bold text-pink-900 hover:bg-slate-100"
-            >
-              Message on Instagram →
-            </a>
-          </div>
-
-          {/* Secondary CTA */}
-          <div className="text-center text-sm text-slate-300">
-            <p>Check your email for a special welcome offer</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
