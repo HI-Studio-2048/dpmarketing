@@ -26,10 +26,19 @@ interface RecipientRow {
   attempts: number;
 }
 
+export interface SegmentFilter {
+  status?: string;
+  source?: string;
+  platform?: string;
+  tags?: string;
+  date_from?: string;
+  date_to?: string;
+}
+
 /** Insert pending recipient rows for a broadcast, excluding unsubscribed leads. */
 export async function enqueueBroadcast(
   broadcastId: string,
-  segmentStatus: string | undefined
+  segment: SegmentFilter | undefined
 ): Promise<number> {
   const pageSize = 1000;
   const leads: Array<{ id: string; email: string; first_name: string | null }> = [];
@@ -38,7 +47,19 @@ export async function enqueueBroadcast(
       .from("leads")
       .select("id, email, first_name")
       .eq("unsubscribed", false);
-    if (segmentStatus) query = query.eq("status", segmentStatus);
+
+    if (segment?.status) query = query.eq("status", segment.status);
+    if (segment?.source) query = query.ilike("source", `%${segment.source}%`);
+    if (segment?.platform) query = query.eq("platform", segment.platform);
+    if (segment?.tags) {
+      const tagList = segment.tags.split(",").map((t) => t.trim()).filter(Boolean);
+      for (const tag of tagList) {
+        query = query.contains("tags", [tag]);
+      }
+    }
+    if (segment?.date_from) query = query.gte("created_at", `${segment.date_from}T00:00:00Z`);
+    if (segment?.date_to) query = query.lte("created_at", `${segment.date_to}T23:59:59Z`);
+
     const { data, error } = await query.range(from, from + pageSize - 1);
     if (error) throw new Error(`enqueue: failed to read leads: ${error.message}`);
     if (!data?.length) break;

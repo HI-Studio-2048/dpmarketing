@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create broadcast" }, { status: 500 });
     }
 
-    const enqueued = await enqueueBroadcast(broadcast.id, segment_json?.status);
+    const enqueued = await enqueueBroadcast(broadcast.id, segment_json);
 
     await supabase
       .from("broadcasts")
