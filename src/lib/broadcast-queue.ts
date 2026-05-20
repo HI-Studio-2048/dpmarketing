@@ -92,6 +92,23 @@ async function countPending(): Promise<number> {
   return count || 0;
 }
 
+/** Flip any of the given broadcasts to 'sent' once they have no pending/sending rows left. */
+async function markCompletedBroadcasts(broadcastIds: string[]): Promise<void> {
+  for (const bid of broadcastIds) {
+    const { count } = await supabase
+      .from("broadcast_recipients")
+      .select("id", { count: "exact", head: true })
+      .eq("broadcast_id", bid)
+      .in("status", ["pending", "sending"]);
+    if ((count || 0) === 0) {
+      await supabase
+        .from("broadcasts")
+        .update({ status: "sent", sent_at: new Date().toISOString() })
+        .eq("id", bid);
+    }
+  }
+}
+
 /** Process one bounded batch. Returns counts + whether more work/cap remains. */
 export async function drainOnce(): Promise<DrainResult> {
   const settings = await getSettings();
@@ -157,6 +174,7 @@ export async function drainOnce(): Promise<DrainResult> {
         .eq("id", r.id);
       sent++;
     }
+    await markCompletedBroadcasts(broadcastIds);
     return { sent, failed, remaining: await countPending(), capReached: false, paused: false };
   }
 
@@ -209,19 +227,7 @@ export async function drainOnce(): Promise<DrainResult> {
   }
 
   // Mark broadcasts complete when no pending/sending rows remain.
-  for (const bid of broadcastIds) {
-    const { count } = await supabase
-      .from("broadcast_recipients")
-      .select("id", { count: "exact", head: true })
-      .eq("broadcast_id", bid)
-      .in("status", ["pending", "sending"]);
-    if ((count || 0) === 0) {
-      await supabase
-        .from("broadcasts")
-        .update({ status: "sent", sent_at: new Date().toISOString() })
-        .eq("id", bid);
-    }
-  }
+  await markCompletedBroadcasts(broadcastIds);
 
   return { sent, failed, remaining: await countPending(), capReached: false, paused: false };
 }
