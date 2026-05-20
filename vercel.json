@@ -3,6 +3,10 @@
     {
       "path": "/api/email/cron",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/email/broadcast-drain",
+      "schedule": "0 14 * * *"
     }
   ]
 }

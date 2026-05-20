@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-server";
-import { sendBroadcast } from "@/lib/email-sender";
+import { enqueueBroadcast } from "@/lib/broadcast-queue";
 
 /**
  * POST /api/admin/broadcasts
  *
- * Create and send a broadcast email to a segment.
+ * Create a broadcast and enqueue its recipients. Sending happens asynchronously
+ * via /api/email/broadcast-drain (cron + self-chain), warmup-capped.
  *
  * Body:
- * - subject: email subject
- * - html_body: email body (supports {{first_name}}, {{email}}, {{unsubscribe_url}})
- * - segment_json: filter criteria (e.g., { status: "Lead" })
+ * - subject: string
+ * - html_body: string (supports {{first_name}}, {{email}}, {{unsubscribe_url}})
+ * - segment_json: { status?: string }
  */
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -25,78 +25,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find recipients based on segment
-    let query = supabase.from("leads").select("email").eq("unsubscribed", false);
-
-    // Apply filters from segment_json
-    if (segment_json?.status) {
-      query = query.eq("status", segment_json.status);
-    }
-
-    const { data: leads, error: leadsError } = await query;
-
-    if (leadsError) {
-      console.error("Error fetching recipients:", leadsError);
-      return NextResponse.json(
-        { error: "Failed to fetch recipients" },
-        { status: 500 }
-      );
-    }
-
-    const recipientEmails = (leads || []).map((l: { email: string }) => l.email);
-
-    // Create broadcast record
-    const { data: broadcastData, error: broadcastError } = await supabase
+    const { data: broadcast, error: bErr } = await supabase
       .from("broadcasts")
       .insert({
         subject,
         html_body,
-        segment_json,
+        segment_json: segment_json || {},
         status: "sending",
-        recipient_count: recipientEmails.length,
       })
       .select()
       .single();
 
-    if (broadcastError) {
-      console.error("Error creating broadcast:", broadcastError);
-      return NextResponse.json(
-        { error: "Failed to create broadcast" },
-        { status: 500 }
-      );
+    if (bErr || !broadcast) {
+      console.error("Error creating broadcast:", bErr);
+      return NextResponse.json({ error: "Failed to create broadcast" }, { status: 500 });
     }
 
-    const broadcastId = broadcastData.id;
+    const enqueued = await enqueueBroadcast(broadcast.id, segment_json?.status);
 
-    // Send the broadcast
-    const { sent, failed } = await sendBroadcast(
-      broadcastId,
-      recipientEmails,
-      subject,
-      html_body
-    );
-
-    // Update broadcast status
     await supabase
       .from("broadcasts")
-      .update({
-        status: "sent",
-        sent_at: new Date().toISOString(),
-      })
-      .eq("id", broadcastId);
+      .update({ recipient_count: enqueued })
+      .eq("id", broadcast.id);
+
+    // Kick off the first drain immediately (best-effort).
+    const url = new URL("/api/email/broadcast-drain", request.url);
+    void fetch(url.toString(), {
+      method: "POST",
+      headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
+    }).catch(() => {});
 
     return NextResponse.json({
       success: true,
-      broadcast_id: broadcastId,
-      sent,
-      failed,
-      total: recipientEmails.length,
+      broadcast_id: broadcast.id,
+      enqueued,
+      message: "Broadcast queued; sending will ramp per warmup schedule.",
     });
   } catch (error) {
-    console.error("Broadcast API error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : "Internal server error";
+    console.error("Broadcast API error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
