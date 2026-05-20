@@ -119,3 +119,70 @@ $$;
 create trigger leads_touch_updated_at
     before update on public.leads
     for each row execute function public.touch_updated_at();
+
+-- ============================================================
+-- Batched broadcast sending (added 2026-05-20)
+-- ============================================================
+
+-- Queue: one row per (broadcast, recipient)
+create table public.broadcast_recipients (
+    id           uuid primary key default gen_random_uuid(),
+    broadcast_id uuid not null references public.broadcasts(id) on delete cascade,
+    lead_id      uuid references public.leads(id) on delete set null,
+    email        text not null,
+    first_name   text,
+    status       text not null default 'pending',  -- pending | sending | sent | failed
+    attempts     integer not null default 0,
+    error        text,
+    sent_at      timestamptz,
+    created_at   timestamptz not null default now(),
+    unique (broadcast_id, email)
+);
+create index broadcast_recipients_drain_idx
+    on public.broadcast_recipients (broadcast_id, status);
+create index broadcast_recipients_pending_idx
+    on public.broadcast_recipients (status) where status = 'pending';
+alter table public.broadcast_recipients enable row level security;
+
+-- Single-row sending config
+create table public.email_settings (
+    id                 boolean primary key default true,
+    daily_max          integer not null default 5000,
+    warmup_curve       integer[] not null
+                         default '{50,100,250,500,1000,1500,2500,3500,5000}',
+    warmup_started_on  date,
+    paused             boolean not null default false,
+    updated_at         timestamptz not null default now(),
+    constraint email_settings_singleton check (id)
+);
+insert into public.email_settings (id) values (true) on conflict do nothing;
+alter table public.email_settings enable row level security;
+
+-- Atomic batch claim: marks up to p_limit pending rows as 'sending' and returns them.
+create or replace function public.claim_broadcast_batch(p_limit int)
+returns setof public.broadcast_recipients
+language plpgsql as $$
+begin
+    return query
+    update public.broadcast_recipients r
+       set status = 'sending', attempts = r.attempts + 1
+     where r.id in (
+         select id from public.broadcast_recipients
+          where status = 'pending'
+          order by created_at
+          limit p_limit
+          for update skip locked
+     )
+    returning r.*;
+end;
+$$;
+
+-- Reclaim stuck 'sending' rows (crash recovery)
+create or replace function public.reclaim_stuck_recipients(p_older_than_minutes int)
+returns void
+language sql as $$
+    update public.broadcast_recipients
+       set status = 'pending'
+     where status = 'sending'
+       and created_at < now() - (p_older_than_minutes || ' minutes')::interval;
+$$;
