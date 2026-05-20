@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 const SCENTS: Record<string, { name: string; tagline: string }> = {
@@ -10,7 +11,7 @@ const SCENTS: Record<string, { name: string; tagline: string }> = {
   noir: { name: "Noir Smoke", tagline: "Grounded. Timeless. Confident." },
 };
 
-export default function ThankYouPage() {
+function ThankYouContent() {
   const searchParams = useSearchParams();
   const scentMatch = searchParams.get("scent") || "oud";
   const scent = SCENTS[scentMatch] || SCENTS.oud;
@@ -72,5 +73,17 @@ export default function ThankYouPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function ThankYouPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
+      }
+    >
+      <ThankYouContent />
+    </Suspense>
   );
 }
