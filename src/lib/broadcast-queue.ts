@@ -50,24 +50,26 @@ export async function enqueueBroadcast(
 
   let inserted = 0;
   for (const group of chunk(rows, 500)) {
-    const { error: insErr } = await supabase
+    const { data: insData, error: insErr } = await supabase
       .from("broadcast_recipients")
-      .upsert(group, { onConflict: "broadcast_id,email", ignoreDuplicates: true });
+      .upsert(group, { onConflict: "broadcast_id,email", ignoreDuplicates: true })
+      .select("id");
     if (insErr) throw new Error(`enqueue: insert failed: ${insErr.message}`);
-    inserted += group.length;
+    inserted += insData?.length ?? 0;
   }
   return inserted;
 }
 
 async function getSettings() {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("email_settings")
     .select("daily_max, warmup_curve, warmup_started_on, paused")
     .eq("id", true)
     .single();
-  return (
-    data || { daily_max: 5000, warmup_curve: [], warmup_started_on: null, paused: false }
-  );
+  if (error || !data) {
+    throw new Error(`drain: failed to read email_settings: ${error?.message ?? "no row"}`);
+  }
+  return data;
 }
 
 /** Count broadcast emails logged today (UTC). */
