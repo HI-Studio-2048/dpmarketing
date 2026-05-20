@@ -1,14 +1,20 @@
 # danielphilip.com Marketing Dashboard
 
-A private admin dashboard for managing email leads and running drip campaigns for danielphilip.com.
+A complete marketing dashboard with a **fragrance quiz funnel** and **admin lead management system** for danielphilip.com.
 
 ## Features
 
+### Public Funnel
+- **Fragrance Quiz** — 5-question scent compatibility quiz (`/quiz`)
+- **Smart Matching** — Proprietary algorithm matches users to scent lines
+- **Lead Capture** — Collects name, email, phone before revealing match
+- **Auto-enrollment** — Quiz leads auto-enroll in welcome sequence with instant email
+
+### Admin Dashboard
 - **Lead Management** — View, filter, and segment leads collected from quizzes and sales funnels
 - **Email Sequences** — Create multi-step drip campaigns with behavioral triggers
 - **Broadcast Composer** — Send one-off emails to segmented audiences
 - **Analytics** — Track open rates, click rates, and unsubscribes
-- **Auto-enrollment** — New leads automatically enrolled in the active sequence with welcome email
 - **Webhook Tracking** — Resend integration automatically updates email statuses
 
 ## Quick Start
@@ -75,7 +81,12 @@ src/
 │   └── utils.ts              # Utility functions
 ├── middleware.ts              # Auth gate for /admin routes
 └── app/
-    ├── admin/                 # Protected admin dashboard
+    ├── quiz/                  # Public fragrance quiz
+    │   ├── layout.tsx        # Quiz layout (dark luxe aesthetic)
+    │   └── page.tsx          # 5-question quiz with lead capture
+    ├── thank-you/            # Post-quiz thank you page
+    │   └── page.tsx          # Results + Instagram CTA
+    ├── admin/                # Protected admin dashboard
     │   ├── layout.tsx        # Admin layout with sidebar
     │   ├── page.tsx          # Dashboard homepage
     │   ├── leads/            # Lead management
@@ -97,10 +108,28 @@ src/
 
 ## How It Works
 
+### Fragrance Quiz Funnel
+
+1. User visits `/quiz` landing page
+2. Clicks "Start Quiz" → enters 5-question fragrance compatibility questionnaire
+3. Questions cover: vibe, occasion, style, scent preferences, desired feeling
+4. On question 5, redirected to lead capture form (name, email, phone)
+5. On form submit:
+   - `POST /api/leads` creates lead with quiz answers and calculated scent match
+   - Lead auto-enrolled in active welcome sequence
+   - Welcome email sent immediately
+   - Redirects to `/thank-you?scent=[oud|citrus|rose|noir]`
+6. Thank you page shows matched scent + Instagram DM CTA
+
+**Scent Matching Algorithm:**
+- Each answer maps to one of 4 scent lines: Oud Royale, Citrus Bloom, Rose Amber, Noir Smoke
+- Points tallied for each scent based on answer matches
+- Highest-scoring scent returned to user
+
 ### Lead Collection → Enrollment
 
-1. External quiz/funnel calls `POST /api/leads` with lead data
-2. Lead is upserted into database
+1. Internal quiz or external funnel calls `POST /api/leads` with lead data
+2. Lead is upserted into database (email = primary key)
 3. Lead is automatically enrolled in the active sequence
 4. Welcome email (day_offset=0) is sent immediately
 5. Returns `lead_id`
