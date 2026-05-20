@@ -1,5 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700&display=swap');
 
 * {
   margin: 0;
@@ -7,8 +7,51 @@
   box-sizing: border-box;
 }
 
+:root {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-card: #1e1e3a;
+  --bg-sidebar: #0f0f23;
+  --bg-input: #2a2a4a;
+  --text-primary: #e2e8f0;
+  --text-secondary: #8892a4;
+  --text-muted: #5a6378;
+  --accent-blue: #5b73e8;
+  --accent-green: #34c38f;
+  --accent-orange: #f1b44c;
+  --accent-red: #f46a6a;
+  --accent-purple: #7c3aed;
+  --accent-cyan: #50d1e6;
+  --border-color: rgba(255, 255, 255, 0.06);
+  --hover-bg: rgba(255, 255, 255, 0.04);
+}
+
 body {
-  font-family: 'Assistant', sans-serif;
-  color: #121212;
-  background: #ffffff;
+  font-family: 'Poppins', sans-serif;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Form element defaults for dark theme */
+input, textarea, select {
+  color-scheme: dark;
 }

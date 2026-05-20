@@ -2,8 +2,19 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Menu, X, LogOut } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  Menu,
+  X,
+  LogOut,
+  LayoutDashboard,
+  Users,
+  Upload,
+  Mail,
+  PenTool,
+  BarChart3,
+  Zap,
+} from "lucide-react";
 
 export default function AdminLayout({
   children,
@@ -11,6 +22,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   async function handleLogout() {
@@ -19,72 +31,102 @@ export default function AdminLayout({
   }
 
   const navItems = [
-    { label: "Dashboard", href: "/admin" },
-    { label: "Leads", href: "/admin/leads" },
-    { label: "Import", href: "/admin/import" },
-    { label: "Sequences", href: "/admin/sequences" },
-    { label: "Composer", href: "/admin/composer" },
-    { label: "Analytics", href: "/admin/analytics" },
+    { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { label: "Leads", href: "/admin/leads", icon: Users },
+    { label: "Import", href: "/admin/import", icon: Upload },
+    { label: "Sequences", href: "/admin/sequences", icon: Zap },
+    { label: "Composer", href: "/admin/composer", icon: PenTool },
+    { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   ];
 
+  function isActive(href: string) {
+    if (href === "/admin") return pathname === "/admin";
+    return pathname?.startsWith(href);
+  }
+
   return (
-    <div className="flex min-h-screen bg-[#f3f3f3]">
+    <div className="flex min-h-screen bg-[var(--bg-primary)]">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-20 bg-black/40 md:hidden"
+          className="fixed inset-0 z-20 bg-black/60 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-30 h-screen w-56 border-r border-[#121212]/10 bg-white transition-transform md:relative md:translate-x-0 ${
+        className={`fixed left-0 top-0 z-30 flex h-screen w-[240px] flex-col bg-[var(--bg-sidebar)] transition-transform md:relative md:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-full flex-col px-4 py-6">
-          <Link href="/" className="mb-10 px-3 text-sm tracking-[0.2em] uppercase text-[#121212]">
+        {/* Brand */}
+        <div className="flex h-16 items-center gap-3 border-b border-[var(--border-color)] px-6">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--accent-blue)] to-[var(--accent-purple)]">
+            <Mail size={16} className="text-white" />
+          </div>
+          <Link href="/" className="text-base font-semibold text-white">
             Daniel Philip
           </Link>
+        </div>
 
-          <nav className="flex-1 space-y-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className="block px-3 py-2 text-sm text-[#121212]/60 hover:text-[#121212]"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-4">
+          <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
+            Menu
+          </p>
+          <div className="space-y-1">
+            {navItems.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all ${
+                    active
+                      ? "bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-purple)] text-white shadow-lg shadow-[var(--accent-blue)]/20"
+                      : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]"
+                  }`}
+                >
+                  <item.icon size={18} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
 
+        {/* Logout */}
+        <div className="border-t border-[var(--border-color)] p-3">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-[#121212]/40 hover:text-[#121212]"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-[var(--text-muted)] transition-all hover:bg-[var(--hover-bg)] hover:text-[var(--accent-red)]"
           >
-            <LogOut size={14} />
+            <LogOut size={18} />
             Logout
           </button>
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1">
-        {/* Mobile header */}
-        <header className="border-b border-[#121212]/10 bg-white p-4 md:hidden">
+      <main className="flex-1 overflow-auto">
+        {/* Top header bar */}
+        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-primary)]/80 px-6 backdrop-blur-md">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-[#121212]"
+            className="text-[var(--text-secondary)] md:hidden"
           >
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
+          <div className="hidden md:block" />
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[var(--accent-blue)] to-[var(--accent-purple)]" />
+          </div>
         </header>
 
         {/* Page content */}
-        <div className="p-6 md:p-10">{children}</div>
+        <div className="p-6 md:p-8">{children}</div>
       </main>
     </div>
   );

@@ -24,6 +24,15 @@ interface Sequence {
   sequence_steps: SequenceStep[];
 }
 
+const emailTypeColors: Record<string, string> = {
+  welcome: "bg-green-500/10 text-green-400",
+  education: "bg-blue-500/10 text-blue-400",
+  offer: "bg-orange-500/10 text-orange-400",
+  value: "bg-purple-500/10 text-purple-400",
+  urgency: "bg-red-500/10 text-red-400",
+  behavioral: "bg-cyan-500/10 text-cyan-400",
+};
+
 export default function SequenceDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -55,7 +64,6 @@ export default function SequenceDetailPage() {
       const data = await response.json();
       setSequence(data.sequence);
 
-      // Auto-increment step number
       const nextStepNumber =
         (data.sequence.sequence_steps?.length || 0) + 1;
       setStepForm((prev) => ({
@@ -89,7 +97,6 @@ export default function SequenceDetailPage() {
       if (response.ok) {
         setShowStepForm(false);
         await fetchSequence();
-        // Reset form
         const nextStepNumber =
           (sequence?.sequence_steps?.length || 0) + 1;
         setStepForm({
@@ -107,31 +114,50 @@ export default function SequenceDetailPage() {
   }
 
   if (loading) {
-    return <div className="text-slate-600">Loading...</div>;
+    return (
+      <div className="text-sm text-[var(--text-secondary)]">Loading...</div>
+    );
   }
 
   if (!sequence) {
-    return <div className="text-slate-600">Sequence not found</div>;
+    return (
+      <div className="text-sm text-[var(--text-secondary)]">
+        Sequence not found
+      </div>
+    );
   }
+
+  const inputClasses =
+    "w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-input)] px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent-blue)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-blue)]";
+  const labelClasses =
+    "mb-1.5 block text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]";
 
   return (
     <div>
       <Link
         href="/admin/sequences"
-        className="mb-6 flex items-center gap-2 text-blue-600 hover:underline"
+        className="mb-6 inline-flex items-center gap-2 text-sm text-[var(--accent-blue)] hover:underline"
       >
-        <ChevronLeft size={18} />
+        <ChevronLeft size={16} />
         Back to Sequences
       </Link>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">{sequence.name}</h1>
+        <h1 className="text-xl font-semibold text-[var(--text-primary)]">
+          {sequence.name}
+        </h1>
         {sequence.description && (
-          <p className="mt-2 text-slate-600">{sequence.description}</p>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            {sequence.description}
+          </p>
         )}
-        <div className="mt-2">
+        <div className="mt-3">
           <span
-            className={`inline-block rounded px-2 py-1 text-xs font-medium ${sequence.is_active ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-800"}`}
+            className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium ${
+              sequence.is_active
+                ? "bg-green-500/10 text-green-400"
+                : "bg-gray-500/10 text-gray-400"
+            }`}
           >
             {sequence.is_active ? "Active" : "Inactive"}
           </span>
@@ -140,12 +166,14 @@ export default function SequenceDetailPage() {
 
       <div className="mb-8">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">Email Steps</h2>
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">
+            Email Steps
+          </h2>
           <button
             onClick={() => setShowStepForm(!showStepForm)}
-            className="flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-purple)] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[var(--accent-blue)]/20"
           >
-            <Plus size={18} />
+            <Plus size={16} />
             Add Step
           </button>
         </div>
@@ -153,55 +181,47 @@ export default function SequenceDetailPage() {
         {showStepForm && (
           <form
             onSubmit={handleAddStep}
-            className="mt-6 rounded-lg bg-white p-6 shadow"
+            className="mt-6 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-6"
           >
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-slate-700">
-                  Step Number
-                </label>
+                <label className={labelClasses}>Step Number</label>
                 <input
                   type="number"
                   value={stepForm.step_number}
                   onChange={(e) =>
                     setStepForm({ ...stepForm, step_number: e.target.value })
                   }
-                  className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+                  className={inputClasses}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">
-                  Days After Enrollment
-                </label>
+                <label className={labelClasses}>Days After Enrollment</label>
                 <input
                   type="number"
                   value={stepForm.day_offset}
                   onChange={(e) =>
                     setStepForm({ ...stepForm, day_offset: e.target.value })
                   }
-                  className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+                  className={inputClasses}
                   required
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700">
-                  Email Subject
-                </label>
+                <label className={labelClasses}>Email Subject</label>
                 <input
                   type="text"
                   value={stepForm.subject}
                   onChange={(e) =>
                     setStepForm({ ...stepForm, subject: e.target.value })
                   }
-                  className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+                  className={inputClasses}
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">
-                  Step Key
-                </label>
+                <label className={labelClasses}>Step Key</label>
                 <input
                   type="text"
                   value={stepForm.step_key}
@@ -209,19 +229,17 @@ export default function SequenceDetailPage() {
                     setStepForm({ ...stepForm, step_key: e.target.value })
                   }
                   placeholder="e.g., welcome, offer_1"
-                  className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+                  className={inputClasses}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">
-                  Email Type
-                </label>
+                <label className={labelClasses}>Email Type</label>
                 <select
                   value={stepForm.email_type}
                   onChange={(e) =>
                     setStepForm({ ...stepForm, email_type: e.target.value })
                   }
-                  className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+                  className={inputClasses}
                 >
                   <option value="welcome">Welcome</option>
                   <option value="education">Education</option>
@@ -232,32 +250,30 @@ export default function SequenceDetailPage() {
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700">
-                  HTML Body
-                </label>
+                <label className={labelClasses}>HTML Body</label>
                 <textarea
                   value={stepForm.html_body}
                   onChange={(e) =>
                     setStepForm({ ...stepForm, html_body: e.target.value })
                   }
                   placeholder="Enter HTML email body. Use {{first_name}}, {{email}}, {{unsubscribe_url}} for personalization."
-                  className="mt-1 w-full rounded border border-slate-300 px-3 py-2 font-mono text-sm"
+                  className={`${inputClasses} font-mono`}
                   rows={8}
                   required
                 />
               </div>
             </div>
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 flex gap-3">
               <button
                 type="submit"
-                className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                className="rounded-lg bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-purple)] px-5 py-2.5 text-sm font-medium text-white"
               >
                 Add Step
               </button>
               <button
                 type="button"
                 onClick={() => setShowStepForm(false)}
-                className="rounded bg-slate-200 px-4 py-2 hover:bg-slate-300"
+                className="rounded-lg border border-[var(--border-color)] px-5 py-2.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--hover-bg)]"
               >
                 Cancel
               </button>
@@ -266,27 +282,34 @@ export default function SequenceDetailPage() {
         )}
 
         {sequence.sequence_steps && sequence.sequence_steps.length > 0 ? (
-          <div className="mt-6 space-y-4">
+          <div className="mt-6 space-y-3">
             {sequence.sequence_steps
               .sort((a, b) => a.day_offset - b.day_offset)
               .map((step) => (
                 <div
                   key={step.id}
-                  className="rounded-lg border border-slate-200 bg-white p-4"
+                  className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 transition-all hover:border-[var(--accent-blue)]/20"
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="font-bold text-slate-900">
+                      <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                         Step {step.step_number}: {step.subject}
                       </h3>
-                      <p className="mt-1 text-sm text-slate-600">
-                        Day {step.day_offset} •{" "}
-                        <span className="inline-block rounded bg-slate-100 px-2 py-1 text-xs">
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="rounded-lg bg-[var(--bg-primary)] px-2.5 py-1 text-xs text-[var(--text-secondary)]">
+                          Day {step.day_offset}
+                        </span>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                            emailTypeColors[step.email_type] ||
+                            "bg-gray-500/10 text-gray-400"
+                          }`}
+                        >
                           {step.email_type}
                         </span>
-                      </p>
+                      </div>
                       {step.step_key && (
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-2 text-xs text-[var(--text-muted)]">
                           Key: {step.step_key}
                         </p>
                       )}
@@ -296,8 +319,8 @@ export default function SequenceDetailPage() {
               ))}
           </div>
         ) : (
-          <div className="mt-6 rounded-lg bg-slate-50 p-6 text-center">
-            <p className="text-slate-600">
+          <div className="mt-6 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-8 text-center">
+            <p className="text-sm text-[var(--text-secondary)]">
               No steps yet. Add the first step to begin.
             </p>
           </div>

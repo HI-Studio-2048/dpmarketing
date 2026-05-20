@@ -11,6 +11,14 @@ interface LeadsResponse {
   isMock?: boolean;
 }
 
+const statusColors: Record<string, string> = {
+  Lead: "bg-blue-500/10 text-blue-400",
+  "Checkout Started": "bg-orange-500/10 text-orange-400",
+  Buyer: "bg-green-500/10 text-green-400",
+  Abandoned: "bg-red-500/10 text-red-400",
+  Unsubscribed: "bg-gray-500/10 text-gray-400",
+};
+
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,98 +54,119 @@ export default function LeadsPage() {
 
   return (
     <div>
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Leads</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-[var(--text-primary)]">
+            Leads
+          </h1>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            {total > 0 ? `${total} total leads` : "Manage your leads"}
+          </p>
+        </div>
         {isMock && (
-          <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800">
-            📋 Mock Data
+          <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-400">
+            Mock Data
           </span>
         )}
       </div>
 
       {loading ? (
-        <div className="rounded-lg bg-white p-6 shadow">
-          <p className="text-slate-600">Loading leads...</p>
+        <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-8">
+          <p className="text-sm text-[var(--text-secondary)]">
+            Loading leads...
+          </p>
         </div>
       ) : (
         <>
-          <div className="rounded-lg bg-white shadow">
-            <table className="w-full">
-              <thead className="border-b border-slate-200 bg-slate-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">
-                    Source
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">
-                    Date
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {leads.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center">
-                      <p className="text-slate-600">No leads yet</p>
-                    </td>
+          <div className="overflow-hidden rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)]">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-[var(--border-color)]">
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                      Email
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                      Name
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                      Source
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                      Date
+                    </th>
                   </tr>
-                ) : (
-                  leads.map((lead) => (
-                    <tr key={lead.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 text-sm">
-                        <Link
-                          href={`/admin/leads/${lead.id}`}
-                          className="text-blue-600 hover:underline"
-                        >
-                          {lead.email}
-                        </Link>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        {lead.first_name || "—"}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className="rounded bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
-                          {lead.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {lead.source || "—"}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {new Date(lead.created_at).toLocaleDateString()}
+                </thead>
+                <tbody>
+                  {leads.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-6 py-12 text-center text-sm text-[var(--text-secondary)]"
+                      >
+                        No leads yet
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    leads.map((lead) => (
+                      <tr
+                        key={lead.id}
+                        className="border-b border-[var(--border-color)] transition-colors hover:bg-[var(--hover-bg)]"
+                      >
+                        <td className="px-6 py-4 text-sm">
+                          <Link
+                            href={`/admin/leads/${lead.id}`}
+                            className="text-[var(--accent-blue)] hover:underline"
+                          >
+                            {lead.email}
+                          </Link>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-[var(--text-primary)]">
+                          {lead.first_name || "—"}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span
+                            className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium ${
+                              statusColors[lead.status] || statusColors.Lead
+                            }`}
+                          >
+                            {lead.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-[var(--text-secondary)]">
+                          {lead.source || "—"}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-[var(--text-secondary)]">
+                          {new Date(lead.created_at).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {pages > 1 && (
             <div className="mt-6 flex items-center justify-between">
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-[var(--text-secondary)]">
                 Page {page} of {pages} ({total} total)
               </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page === 1}
-                  className="rounded bg-slate-200 px-4 py-2 text-sm disabled:opacity-50"
+                  className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--hover-bg)] disabled:opacity-30"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setPage(Math.min(pages, page + 1))}
                   disabled={page === pages}
-                  className="rounded bg-slate-200 px-4 py-2 text-sm disabled:opacity-50"
+                  className="rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--hover-bg)] disabled:opacity-30"
                 >
                   Next
                 </button>

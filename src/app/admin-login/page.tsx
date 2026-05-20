@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { Mail, Lock } from "lucide-react";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -27,7 +27,7 @@ export default function AdminLoginPage() {
       } else {
         setError("Invalid password");
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred. Please try again.");
     } finally {
       setLoading(false);
@@ -35,49 +35,68 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-white px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--bg-primary)] px-4">
       <div className="w-full max-w-sm">
+        {/* Logo / Brand */}
         <div className="mb-10 text-center">
-          <Link href="/" className="text-lg tracking-[0.2em] uppercase text-[#121212]">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--accent-blue)] to-[var(--accent-purple)] shadow-lg shadow-[var(--accent-blue)]/20">
+            <Mail size={24} className="text-white" />
+          </div>
+          <h1 className="text-lg font-semibold text-[var(--text-primary)]">
             Daniel Philip
-          </Link>
-          <p className="mt-3 text-xs tracking-wider uppercase text-[#121212]/40">
-            Admin Access
+          </h1>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">
+            Admin Dashboard
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-2 block text-xs tracking-wider uppercase text-[#121212]/60"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border-b border-[#121212]/20 bg-transparent py-3 text-sm text-[#121212] placeholder:text-[#121212]/30 focus:border-[#121212] focus:outline-none"
-              placeholder="Enter your password"
+        {/* Login Card */}
+        <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-8">
+          <h2 className="mb-6 text-center text-base font-semibold text-[var(--text-primary)]">
+            Sign In
+          </h2>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label
+                htmlFor="password"
+                className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]"
+              >
+                Password
+              </label>
+              <div className="relative">
+                <Lock
+                  size={16}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
+                />
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-input)] py-3 pl-10 pr-4 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent-blue)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-blue)]"
+                  placeholder="Enter your password"
+                  disabled={loading}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="rounded-lg bg-red-500/10 px-4 py-2.5 text-sm text-[var(--accent-red)]">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
               disabled={loading}
-              autoFocus
-            />
-          </div>
-
-          {error && (
-            <p className="text-sm text-red-600">{error}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full border border-[#121212] bg-[#121212] px-6 py-3 text-sm tracking-wider uppercase text-white hover:bg-white hover:text-[#121212] disabled:opacity-30"
-          >
-            {loading ? "Signing in..." : "Sign In"}
-          </button>
-        </form>
+              className="w-full rounded-lg bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-purple)] py-3 text-sm font-medium text-white shadow-lg shadow-[var(--accent-blue)]/20 transition-all hover:shadow-xl hover:shadow-[var(--accent-blue)]/30 disabled:opacity-30"
+            >
+              {loading ? "Signing in..." : "Sign In"}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
