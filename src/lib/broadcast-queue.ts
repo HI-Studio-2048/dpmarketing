@@ -1,11 +1,10 @@
 // src/lib/broadcast-queue.ts
 import { supabase } from "./supabase-server";
 import { sendBatch, type BatchMessage } from "./resend";
-import { dailyCap } from "./warmup";
+
 import { chunk } from "./chunk";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://team.danielphilip.com";
-const EMAIL_CAMPAIGN_ENABLED = process.env.EMAIL_CAMPAIGN_ENABLED === "true";
 const PER_RUN_BATCH = 1000;
 const STUCK_MINUTES = 15;
 
@@ -99,17 +98,6 @@ async function getSettings() {
   return data;
 }
 
-/** Count broadcast emails logged today (UTC). */
-async function sentToday(): Promise<number> {
-  const start = new Date();
-  start.setUTCHours(0, 0, 0, 0);
-  const { count } = await supabase
-    .from("email_logs")
-    .select("id", { count: "exact", head: true })
-    .eq("campaign_type", "broadcast")
-    .gte("created_at", start.toISOString());
-  return count || 0;
-}
 
 async function countPending(): Promise<number> {
   const { count } = await supabase
@@ -146,14 +134,7 @@ export async function drainOnce(): Promise<DrainResult> {
   // Reclaim crashed 'sending' rows first.
   await supabase.rpc("reclaim_stuck_recipients", { p_older_than_minutes: STUCK_MINUTES });
 
-  const cap = dailyCap(settings.warmup_started_on, settings.daily_max, settings.warmup_curve);
-  const already = await sentToday();
-  const remainingCap = Math.max(0, cap - already);
-  if (remainingCap === 0) {
-    return { sent: 0, failed: 0, remaining: await countPending(), capReached: true, paused: false };
-  }
-
-  const claimLimit = Math.min(PER_RUN_BATCH, remainingCap);
+  const claimLimit = PER_RUN_BATCH;
   const { data: claimed, error: claimErr } = await supabase.rpc("claim_broadcast_batch", {
     p_limit: claimLimit,
   });
@@ -181,29 +162,6 @@ export async function drainOnce(): Promise<DrainResult> {
 
   let sent = 0;
   let failed = 0;
-
-  if (!EMAIL_CAMPAIGN_ENABLED) {
-    // Dry run: log + mark sent without calling Resend.
-    for (const r of batch) {
-      const b = byId.get(r.broadcast_id);
-      await supabase.from("email_logs").insert({
-        lead_id: r.lead_id,
-        email: r.email,
-        campaign_type: "broadcast",
-        broadcast_id: r.broadcast_id,
-        subject: b?.subject || "",
-        resend_id: null,
-        status: "sent",
-      });
-      await supabase
-        .from("broadcast_recipients")
-        .update({ status: "sent", sent_at: new Date().toISOString() })
-        .eq("id", r.id);
-      sent++;
-    }
-    await markCompletedBroadcasts(broadcastIds);
-    return { sent, failed, remaining: await countPending(), capReached: false, paused: false };
-  }
 
   // Build personalized messages.
   const messages: BatchMessage[] = batch.map((r) => {
