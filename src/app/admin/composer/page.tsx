@@ -12,6 +12,7 @@ import {
   X,
   CheckCircle,
   AlertCircle,
+  UserPlus,
 } from "lucide-react";
 
 const RichEditor = dynamic(() => import("@/components/rich-editor"), {
@@ -60,6 +61,12 @@ export default function ComposerPage() {
   const [testEmails, setTestEmails] = useState("");
   const [testLoading, setTestLoading] = useState(false);
   const [testResults, setTestResults] = useState<TestResult[] | null>(null);
+
+  // Direct send
+  const [showDirect, setShowDirect] = useState(false);
+  const [directEmails, setDirectEmails] = useState("");
+  const [directLoading, setDirectLoading] = useState(false);
+  const [directResults, setDirectResults] = useState<TestResult[] | null>(null);
 
   useEffect(() => {
     if (!broadcastId) return;
@@ -157,6 +164,45 @@ export default function ComposerPage() {
       alert("Failed to send test email");
     } finally {
       setTestLoading(false);
+    }
+  }
+
+  async function handleDirectSend() {
+    if (!subject || !htmlBody) {
+      alert("Subject and body are required");
+      return;
+    }
+    const emails = directEmails
+      .split(",")
+      .map((e) => e.trim())
+      .filter((e) => e.includes("@"));
+    if (emails.length === 0) {
+      alert("Enter at least one valid email address");
+      return;
+    }
+    if (!confirm(`Send this email to ${emails.length} address(es)? This is NOT a test — the real email will be sent.`)) {
+      return;
+    }
+
+    setDirectLoading(true);
+    setDirectResults(null);
+    try {
+      const response = await fetch("/api/admin/test-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: emails,
+          subject,
+          html_body: htmlBody,
+          test: false,
+        }),
+      });
+      const data = await response.json();
+      setDirectResults(data.results || []);
+    } catch {
+      alert("Failed to send email");
+    } finally {
+      setDirectLoading(false);
     }
   }
 
@@ -341,6 +387,15 @@ export default function ComposerPage() {
               <FlaskConical size={16} />
               Send Test
             </button>
+
+            <button
+              type="button"
+              onClick={() => setShowDirect(!showDirect)}
+              className="flex items-center gap-2 rounded-lg border border-[var(--border-color)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--hover-bg)]"
+            >
+              <UserPlus size={16} />
+              Direct Send
+            </button>
           </div>
 
           {/* Test Email Panel */}
@@ -386,6 +441,75 @@ export default function ComposerPage() {
               {testResults && (
                 <div className="mt-3 space-y-2">
                   {testResults.map((r) => (
+                    <div
+                      key={r.email}
+                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${
+                        r.success
+                          ? "bg-green-500/5 text-[var(--accent-green)]"
+                          : "bg-red-500/5 text-[var(--accent-red)]"
+                      }`}
+                    >
+                      {r.success ? (
+                        <CheckCircle size={14} />
+                      ) : (
+                        <AlertCircle size={14} />
+                      )}
+                      {r.email}
+                      {r.error && (
+                        <span className="text-xs opacity-70">
+                          — {r.error}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Direct Send Panel */}
+          {showDirect && (
+            <div className="rounded-xl border border-[var(--accent-orange)]/20 bg-[var(--bg-card)] p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                  Direct Send to Custom Emails
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDirect(false);
+                    setDirectResults(null);
+                  }}
+                  className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={directEmails}
+                  onChange={(e) => setDirectEmails(e.target.value)}
+                  placeholder="email1@example.com, email2@example.com"
+                  className={`${inputClasses} flex-1`}
+                />
+                <button
+                  type="button"
+                  onClick={handleDirectSend}
+                  disabled={directLoading}
+                  className="flex items-center gap-2 rounded-lg bg-[var(--accent-orange)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-30"
+                >
+                  <Send size={14} />
+                  {directLoading ? "Sending..." : "Send"}
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-[var(--text-muted)]">
+                Sends the real email (no [TEST] prefix) directly to these
+                addresses. Bypasses broadcast queue and warmup limits.
+              </p>
+              {directResults && (
+                <div className="mt-3 space-y-2">
+                  {directResults.map((r) => (
                     <div
                       key={r.email}
                       className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${

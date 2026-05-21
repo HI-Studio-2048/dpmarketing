@@ -4,12 +4,16 @@ import { resend, EMAIL_FROM } from "@/lib/resend";
 /**
  * POST /api/admin/test-email
  *
- * Sends a test email to specified addresses without creating a broadcast.
- * Body: { to: string[], subject: string, html_body: string }
+ * Sends an email to specified addresses without creating a broadcast.
+ * Body: { to: string[], subject: string, html_body: string, test?: boolean }
+ *
+ * When test=true (default), subject is prefixed with [TEST] and template
+ * variables use placeholder values.
+ * When test=false, subject and body are sent as-is (direct send).
  */
 export async function POST(request: NextRequest) {
   try {
-    const { to, subject, html_body } = await request.json();
+    const { to, subject, html_body, test = true } = await request.json();
 
     if (!to || !Array.isArray(to) || to.length === 0) {
       return NextResponse.json(
@@ -25,20 +29,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Replace template variables with test values
-    const html = html_body
-      .replace(/\{\{first_name\}\}/g, "Test")
-      .replace(/\{\{email\}\}/g, to[0])
-      .replace(/\{\{unsubscribe_url\}\}/g, "#");
-
     const results = [];
 
     for (const email of to) {
+      const html = html_body
+        .replace(/\{\{first_name\}\}/g, test ? "Test" : "")
+        .replace(/\{\{email\}\}/g, email)
+        .replace(/\{\{unsubscribe_url\}\}/g, "#");
+
       try {
         const { data, error } = await resend.emails.send({
           from: EMAIL_FROM,
           to: [email],
-          subject: `[TEST] ${subject}`,
+          subject: test ? `[TEST] ${subject}` : subject,
           html,
         });
 
