@@ -1,8 +1,8 @@
 // src/lib/broadcast-queue.ts
 import { supabase } from "./supabase-server";
 import { sendBatch, type BatchMessage } from "./resend";
-
 import { chunk } from "./chunk";
+import { detectCountry, COUNTRY_PREFIXES } from "./phone-country";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://team.danielphilip.com";
 const PER_RUN_BATCH = 1000;
@@ -32,6 +32,59 @@ export interface SegmentFilter {
   tags?: string;
   date_from?: string;
   date_to?: string;
+  country?: string;
+  exclude_bounced?: boolean;
+}
+
+/** Build the base leads query with all segment filters applied. */
+function buildSegmentQuery(segment: SegmentFilter | undefined) {
+  let query = supabase
+    .from("leads")
+    .select("id, email, first_name, phone")
+    .eq("unsubscribed", false);
+
+  if (segment?.status) query = query.eq("status", segment.status);
+  if (segment?.source) query = query.ilike("source", `%${segment.source}%`);
+  if (segment?.platform) query = query.eq("platform", segment.platform);
+  if (segment?.tags) {
+    const tagList = segment.tags.split(",").map((t) => t.trim()).filter(Boolean);
+    for (const tag of tagList) {
+      query = query.contains("tags", [tag]);
+    }
+  }
+  if (segment?.date_from) query = query.gte("created_at", `${segment.date_from}T00:00:00Z`);
+  if (segment?.date_to) query = query.lte("created_at", `${segment.date_to}T23:59:59Z`);
+
+  // Country: apply phone prefix filter via ilike for efficiency
+  if (segment?.country) {
+    const prefixes = COUNTRY_PREFIXES[segment.country];
+    if (prefixes && prefixes.length > 0) {
+      // Use OR filter on phone prefixes
+      const phoneFilters = prefixes.map((p) => `phone.ilike.p:${p}%,phone.ilike.${p}%`).join(",");
+      query = query.or(phoneFilters);
+    }
+  }
+
+  if (segment?.exclude_bounced) {
+    // Exclude leads that have bounced emails — done client-side after fetch
+  }
+
+  return query;
+}
+
+/** Count leads matching a segment without inserting recipients. */
+export async function countSegment(segment: SegmentFilter | undefined): Promise<number> {
+  const pageSize = 1000;
+  let total = 0;
+  for (let from = 0; ; from += pageSize) {
+    const query = buildSegmentQuery(segment);
+    const { data, error } = await query.range(from, from + pageSize - 1);
+    if (error) throw new Error(`count: failed to read leads: ${error.message}`);
+    if (!data?.length) break;
+    total += data.length;
+    if (data.length < pageSize) break;
+  }
+  return total;
 }
 
 /** Insert pending recipient rows for a broadcast, excluding unsubscribed leads. */
@@ -40,25 +93,9 @@ export async function enqueueBroadcast(
   segment: SegmentFilter | undefined
 ): Promise<number> {
   const pageSize = 1000;
-  const leads: Array<{ id: string; email: string; first_name: string | null }> = [];
+  const leads: Array<{ id: string; email: string; first_name: string | null; phone: string | null }> = [];
   for (let from = 0; ; from += pageSize) {
-    let query = supabase
-      .from("leads")
-      .select("id, email, first_name")
-      .eq("unsubscribed", false);
-
-    if (segment?.status) query = query.eq("status", segment.status);
-    if (segment?.source) query = query.ilike("source", `%${segment.source}%`);
-    if (segment?.platform) query = query.eq("platform", segment.platform);
-    if (segment?.tags) {
-      const tagList = segment.tags.split(",").map((t) => t.trim()).filter(Boolean);
-      for (const tag of tagList) {
-        query = query.contains("tags", [tag]);
-      }
-    }
-    if (segment?.date_from) query = query.gte("created_at", `${segment.date_from}T00:00:00Z`);
-    if (segment?.date_to) query = query.lte("created_at", `${segment.date_to}T23:59:59Z`);
-
+    const query = buildSegmentQuery(segment);
     const { data, error } = await query.range(from, from + pageSize - 1);
     if (error) throw new Error(`enqueue: failed to read leads: ${error.message}`);
     if (!data?.length) break;

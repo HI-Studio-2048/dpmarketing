@@ -1,24 +1,30 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import {
   Send,
   FlaskConical,
   Eye,
   EyeOff,
-  ChevronDown,
-  ChevronUp,
   X,
   CheckCircle,
   AlertCircle,
   UserPlus,
+  Users,
+  Globe,
+  Filter,
+  Calendar,
+  Tag,
+  Layers,
+  Monitor,
+  Loader2,
 } from "lucide-react";
 
 const RichEditor = dynamic(() => import("@/components/rich-editor"), {
   ssr: false,
   loading: () => (
-    <div className="h-[300px] rounded-lg border border-[var(--border-color)] bg-[var(--bg-input)] p-4 text-sm text-[var(--text-muted)]">
+    <div className="flex h-[300px] items-center justify-center rounded-2xl border border-[var(--border-color)] bg-[var(--bg-input)] text-sm text-[var(--text-muted)]">
       Loading editor...
     </div>
   ),
@@ -36,6 +42,58 @@ interface TestResult {
   error: string | null;
 }
 
+const COUNTRIES = [
+  "India",
+  "Philippines",
+  "Indonesia",
+  "Japan",
+  "US/Canada",
+  "UK",
+  "Australia",
+  "Ireland",
+  "Portugal",
+  "Spain",
+  "Finland",
+  "Italy",
+  "Malta",
+  "Greece",
+  "Croatia",
+  "Germany",
+  "France",
+  "Netherlands",
+  "Sweden",
+  "Norway",
+  "Denmark",
+  "Poland",
+  "Austria",
+  "Switzerland",
+  "Hungary",
+  "Romania",
+  "Slovakia",
+  "Ukraine",
+  "Russia",
+  "China",
+  "South Korea",
+  "Thailand",
+  "Malaysia",
+  "Singapore",
+  "Vietnam",
+  "Bangladesh",
+  "Pakistan",
+  "Sri Lanka",
+  "Nepal",
+  "UAE",
+  "Saudi Arabia",
+  "Egypt",
+  "South Africa",
+  "Nigeria",
+  "Kenya",
+  "Brazil",
+  "Mexico",
+  "Colombia",
+  "Argentina",
+];
+
 export default function ComposerPage() {
   const [subject, setSubject] = useState("");
   const [htmlBody, setHtmlBody] = useState("");
@@ -45,13 +103,19 @@ export default function ComposerPage() {
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Segmentation
-  const [showFilters, setShowFilters] = useState(false);
-  const [segStatus, setSegStatus] = useState("Lead");
+  const [segStatus, setSegStatus] = useState("");
   const [segSource, setSegSource] = useState("");
   const [segPlatform, setSegPlatform] = useState("");
   const [segTags, setSegTags] = useState("");
   const [segDateFrom, setSegDateFrom] = useState("");
   const [segDateTo, setSegDateTo] = useState("");
+  const [segCountry, setSegCountry] = useState("");
+  const [segExcludeBounced, setSegExcludeBounced] = useState(false);
+
+  // Audience count
+  const [audienceCount, setAudienceCount] = useState<number | null>(null);
+  const [audienceLoading, setAudienceLoading] = useState(false);
+  const countTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Preview
   const [showPreview, setShowPreview] = useState(false);
@@ -68,6 +132,46 @@ export default function ComposerPage() {
   const [directLoading, setDirectLoading] = useState(false);
   const [directResults, setDirectResults] = useState<TestResult[] | null>(null);
 
+  const buildSegment = useCallback(() => {
+    const segment: Record<string, string | boolean> = {};
+    if (segStatus) segment.status = segStatus;
+    if (segSource) segment.source = segSource;
+    if (segPlatform) segment.platform = segPlatform;
+    if (segTags) segment.tags = segTags;
+    if (segDateFrom) segment.date_from = segDateFrom;
+    if (segDateTo) segment.date_to = segDateTo;
+    if (segCountry) segment.country = segCountry;
+    if (segExcludeBounced) segment.exclude_bounced = true;
+    return segment;
+  }, [segStatus, segSource, segPlatform, segTags, segDateFrom, segDateTo, segCountry, segExcludeBounced]);
+
+  // Debounced audience count
+  useEffect(() => {
+    if (countTimer.current) clearTimeout(countTimer.current);
+    countTimer.current = setTimeout(async () => {
+      setAudienceLoading(true);
+      try {
+        const res = await fetch("/api/admin/audience-count", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(buildSegment()),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setAudienceCount(data.count);
+        }
+      } catch {
+        // ignore
+      } finally {
+        setAudienceLoading(false);
+      }
+    }, 400);
+    return () => {
+      if (countTimer.current) clearTimeout(countTimer.current);
+    };
+  }, [buildSegment]);
+
+  // Broadcast progress polling
   useEffect(() => {
     if (!broadcastId) return;
     async function poll() {
@@ -88,23 +192,13 @@ export default function ComposerPage() {
     };
   }, [broadcastId]);
 
-  function buildSegment() {
-    const segment: Record<string, string> = {};
-    if (segStatus) segment.status = segStatus;
-    if (segSource) segment.source = segSource;
-    if (segPlatform) segment.platform = segPlatform;
-    if (segTags) segment.tags = segTags;
-    if (segDateFrom) segment.date_from = segDateFrom;
-    if (segDateTo) segment.date_to = segDateTo;
-    return segment;
-  }
-
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     if (!subject || !htmlBody) {
       alert("Subject and body are required");
       return;
     }
+    if (!confirm(`Send broadcast to ${audienceCount ?? "?"} leads?`)) return;
     setLoading(true);
     setProgress(null);
     setBroadcastId(null);
@@ -152,11 +246,7 @@ export default function ComposerPage() {
       const response = await fetch("/api/admin/test-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: emails,
-          subject,
-          html_body: htmlBody,
-        }),
+        body: JSON.stringify({ to: emails, subject, html_body: htmlBody }),
       });
       const data = await response.json();
       setTestResults(data.results || []);
@@ -180,9 +270,12 @@ export default function ComposerPage() {
       alert("Enter at least one valid email address");
       return;
     }
-    if (!confirm(`Send this email to ${emails.length} address(es)? This is NOT a test — the real email will be sent.`)) {
+    if (
+      !confirm(
+        `Send this email to ${emails.length} address(es)? This is NOT a test.`
+      )
+    )
       return;
-    }
 
     setDirectLoading(true);
     setDirectResults(null);
@@ -206,139 +299,248 @@ export default function ComposerPage() {
     }
   }
 
-  const activeFilters = [segSource, segPlatform, segTags, segDateFrom, segDateTo].filter(Boolean).length;
+  const activeFilters = [
+    segStatus,
+    segSource,
+    segPlatform,
+    segTags,
+    segDateFrom,
+    segDateTo,
+    segCountry,
+  ].filter(Boolean).length + (segExcludeBounced ? 1 : 0);
 
   const inputClasses =
-    "w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-input)] px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent-blue)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-blue)]";
-  const labelClasses =
-    "mb-1.5 block text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]";
+    "w-full rounded-xl border border-[var(--border-color)] bg-[var(--bg-input)] px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent-blue)]/50 focus:outline-none focus:ring-1 focus:ring-[var(--accent-blue)]/30 transition-colors";
+
+  function ResultList({ results }: { results: TestResult[] }) {
+    return (
+      <div className="mt-3 space-y-1.5">
+        {results.map((r) => (
+          <div
+            key={r.email}
+            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm ${
+              r.success
+                ? "bg-emerald-500/5 text-emerald-400"
+                : "bg-rose-500/5 text-rose-400"
+            }`}
+          >
+            {r.success ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
+            <span className="truncate">{r.email}</span>
+            {r.error && (
+              <span className="text-xs opacity-60">&mdash; {r.error}</span>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-[var(--text-primary)]">
             Email Composer
           </h1>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Compose and send broadcast emails to your leads
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
+            Compose and send broadcast emails
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowPreview(!showPreview)}
-            className="flex items-center gap-2 rounded-lg border border-[var(--border-color)] px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--hover-bg)]"
-          >
-            {showPreview ? <EyeOff size={15} /> : <Eye size={15} />}
-            {showPreview ? "Hide Preview" : "Preview"}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowPreview(!showPreview)}
+          className="flex items-center gap-2 rounded-xl border border-[var(--border-color)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-all hover:bg-[var(--hover-bg)]"
+        >
+          {showPreview ? <EyeOff size={15} /> : <Eye size={15} />}
+          {showPreview ? "Hide Preview" : "Preview"}
+        </button>
       </div>
 
       <div className={`grid gap-6 ${showPreview ? "lg:grid-cols-2" : ""}`}>
         {/* Composer column */}
-        <div className="space-y-6">
-          {/* Segmentation */}
-          <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-            <button
-              type="button"
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex w-full items-center justify-between"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-[var(--text-primary)]">
+        <div className="space-y-5">
+          {/* Audience Segmentation */}
+          <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-6">
+            <div className="mb-5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10">
+                  <Filter size={15} className="text-blue-400" />
+                </div>
+                <h2 className="text-sm font-semibold text-[var(--text-primary)]">
                   Audience
-                </span>
+                </h2>
                 {activeFilters > 0 && (
-                  <span className="rounded-full bg-[var(--accent-blue)]/10 px-2 py-0.5 text-xs font-medium text-[var(--accent-blue)]">
-                    +{activeFilters} filters
+                  <span className="rounded-full bg-[var(--accent-blue)]/10 px-2 py-0.5 text-[11px] font-medium text-[var(--accent-blue)]">
+                    {activeFilters} filter{activeFilters > 1 ? "s" : ""}
                   </span>
                 )}
               </div>
-              {showFilters ? (
-                <ChevronUp size={16} className="text-[var(--text-muted)]" />
-              ) : (
-                <ChevronDown size={16} className="text-[var(--text-muted)]" />
-              )}
-            </button>
-
-            <div className="mt-4">
-              <label className={labelClasses}>Status</label>
-              <select
-                value={segStatus}
-                onChange={(e) => setSegStatus(e.target.value)}
-                className={`${inputClasses} md:w-56`}
-              >
-                <option value="">All Statuses</option>
-                <option value="Lead">Lead</option>
-                <option value="Checkout Started">Checkout Started</option>
-                <option value="Buyer">Buyer</option>
-                <option value="Abandoned">Abandoned</option>
-              </select>
+              {/* Live audience count */}
+              <div className="flex items-center gap-2 rounded-full bg-white/[0.04] px-3.5 py-1.5 ring-1 ring-[var(--border-color)]">
+                {audienceLoading ? (
+                  <Loader2 size={13} className="animate-spin text-[var(--text-muted)]" />
+                ) : (
+                  <Users size={13} className="text-[var(--accent-blue)]" />
+                )}
+                <span className="text-xs font-semibold tabular-nums text-[var(--text-primary)]">
+                  {audienceCount !== null ? audienceCount.toLocaleString() : "..."}
+                </span>
+                <span className="text-[10px] text-[var(--text-muted)]">recipients</span>
+              </div>
             </div>
 
-            {showFilters && (
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className={labelClasses}>Source</label>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Status */}
+              <div>
+                <label className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                  <Layers size={11} />
+                  Status
+                </label>
+                <select
+                  value={segStatus}
+                  onChange={(e) => setSegStatus(e.target.value)}
+                  className={inputClasses}
+                >
+                  <option value="">All Statuses</option>
+                  <option value="Lead">Lead</option>
+                  <option value="Checkout Started">Checkout Started</option>
+                  <option value="Buyer">Buyer</option>
+                  <option value="Abandoned">Abandoned</option>
+                </select>
+              </div>
+
+              {/* Country */}
+              <div>
+                <label className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                  <Globe size={11} />
+                  Country
+                </label>
+                <select
+                  value={segCountry}
+                  onChange={(e) => setSegCountry(e.target.value)}
+                  className={inputClasses}
+                >
+                  <option value="">All Countries</option>
+                  {COUNTRIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Platform */}
+              <div>
+                <label className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                  <Monitor size={11} />
+                  Platform
+                </label>
+                <select
+                  value={segPlatform}
+                  onChange={(e) => setSegPlatform(e.target.value)}
+                  className={inputClasses}
+                >
+                  <option value="">All Platforms</option>
+                  <option value="facebook">Facebook</option>
+                  <option value="instagram">Instagram</option>
+                  <option value="web">Web</option>
+                  <option value="mobile">Mobile</option>
+                </select>
+              </div>
+
+              {/* Source */}
+              <div>
+                <label className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                  <Layers size={11} />
+                  Source
+                </label>
+                <input
+                  type="text"
+                  value={segSource}
+                  onChange={(e) => setSegSource(e.target.value)}
+                  placeholder="e.g. fb-lead-ad, quiz"
+                  className={inputClasses}
+                />
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                  <Tag size={11} />
+                  Tags
+                </label>
+                <input
+                  type="text"
+                  value={segTags}
+                  onChange={(e) => setSegTags(e.target.value)}
+                  placeholder="comma-separated"
+                  className={inputClasses}
+                />
+              </div>
+
+              {/* Date range */}
+              <div>
+                <label className="mb-2 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                  <Calendar size={11} />
+                  Date Range
+                </label>
+                <div className="flex gap-2">
                   <input
-                    type="text"
-                    value={segSource}
-                    onChange={(e) => setSegSource(e.target.value)}
-                    placeholder="e.g. fb-lead-ad, quiz-brain"
-                    className={inputClasses}
+                    type="date"
+                    value={segDateFrom}
+                    onChange={(e) => setSegDateFrom(e.target.value)}
+                    className={`${inputClasses} flex-1 text-xs`}
+                    placeholder="From"
                   />
-                </div>
-                <div>
-                  <label className={labelClasses}>Platform</label>
-                  <select
-                    value={segPlatform}
-                    onChange={(e) => setSegPlatform(e.target.value)}
-                    className={inputClasses}
-                  >
-                    <option value="">All Platforms</option>
-                    <option value="facebook">Facebook</option>
-                    <option value="instagram">Instagram</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClasses}>Tags (comma separated)</label>
                   <input
-                    type="text"
-                    value={segTags}
-                    onChange={(e) => setSegTags(e.target.value)}
-                    placeholder="e.g. fb-lead-ad, quiz"
-                    className={inputClasses}
+                    type="date"
+                    value={segDateTo}
+                    onChange={(e) => setSegDateTo(e.target.value)}
+                    className={`${inputClasses} flex-1 text-xs`}
+                    placeholder="To"
                   />
-                </div>
-                <div className="flex gap-3">
-                  <div className="flex-1">
-                    <label className={labelClasses}>From Date</label>
-                    <input
-                      type="date"
-                      value={segDateFrom}
-                      onChange={(e) => setSegDateFrom(e.target.value)}
-                      className={inputClasses}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className={labelClasses}>To Date</label>
-                    <input
-                      type="date"
-                      value={segDateTo}
-                      onChange={(e) => setSegDateTo(e.target.value)}
-                      className={inputClasses}
-                    />
-                  </div>
                 </div>
               </div>
-            )}
+            </div>
+
+            {/* Options row */}
+            <div className="mt-4 flex items-center gap-4">
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-[var(--text-secondary)]">
+                <input
+                  type="checkbox"
+                  checked={segExcludeBounced}
+                  onChange={(e) => setSegExcludeBounced(e.target.checked)}
+                  className="rounded border-[var(--border-color)] bg-[var(--bg-input)]"
+                />
+                Exclude previously bounced
+              </label>
+              {activeFilters > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSegStatus("");
+                    setSegSource("");
+                    setSegPlatform("");
+                    setSegTags("");
+                    setSegDateFrom("");
+                    setSegDateTo("");
+                    setSegCountry("");
+                    setSegExcludeBounced(false);
+                  }}
+                  className="text-xs text-[var(--accent-red)] transition-colors hover:text-rose-300"
+                >
+                  Clear all filters
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Subject */}
-          <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-            <label className={labelClasses}>Subject Line</label>
+          <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+            <label className="mb-2 block text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+              Subject Line
+            </label>
             <input
               type="text"
               value={subject}
@@ -349,19 +551,22 @@ export default function ComposerPage() {
           </div>
 
           {/* Editor */}
-          <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+          <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
             <div className="mb-3 flex items-center justify-between">
-              <label className={labelClasses + " mb-0"}>Email Body</label>
-              <div className="flex gap-1 text-xs text-[var(--text-muted)]">
-                <span className="rounded bg-[var(--bg-primary)] px-1.5 py-0.5">
-                  {"{{first_name}}"}
-                </span>
-                <span className="rounded bg-[var(--bg-primary)] px-1.5 py-0.5">
-                  {"{{email}}"}
-                </span>
-                <span className="rounded bg-[var(--bg-primary)] px-1.5 py-0.5">
-                  {"{{unsubscribe_url}}"}
-                </span>
+              <label className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                Email Body
+              </label>
+              <div className="flex gap-1 text-[10px] text-[var(--text-muted)]">
+                {["{{first_name}}", "{{email}}", "{{unsubscribe_url}}"].map(
+                  (v) => (
+                    <span
+                      key={v}
+                      className="rounded-lg bg-white/[0.04] px-1.5 py-0.5 ring-1 ring-[var(--border-color)]"
+                    >
+                      {v}
+                    </span>
+                  )
+                )}
               </div>
             </div>
             <RichEditor content={htmlBody} onChange={setHtmlBody} />
@@ -373,25 +578,33 @@ export default function ComposerPage() {
               type="button"
               onClick={handleSend}
               disabled={loading || !subject || !htmlBody}
-              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-purple)] px-6 py-2.5 text-sm font-medium text-white shadow-lg shadow-[var(--accent-blue)]/20 transition-all hover:shadow-xl hover:shadow-[var(--accent-blue)]/30 disabled:opacity-30"
+              className="flex items-center gap-2 rounded-2xl bg-[var(--accent-blue)] px-6 py-2.5 text-sm font-medium text-white transition-all hover:bg-[var(--accent-blue)]/90 hover:shadow-lg hover:shadow-[var(--accent-blue)]/20 disabled:opacity-30"
             >
               <Send size={16} />
-              {loading ? "Queuing..." : "Queue Broadcast"}
+              {loading
+                ? "Queuing..."
+                : `Send to ${audienceCount !== null ? audienceCount.toLocaleString() : "..."} leads`}
             </button>
 
             <button
               type="button"
-              onClick={() => setShowTest(!showTest)}
-              className="flex items-center gap-2 rounded-lg border border-[var(--border-color)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--hover-bg)]"
+              onClick={() => {
+                setShowTest(!showTest);
+                setShowDirect(false);
+              }}
+              className="flex items-center gap-2 rounded-2xl border border-[var(--border-color)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-all hover:bg-[var(--hover-bg)]"
             >
               <FlaskConical size={16} />
-              Send Test
+              Test Send
             </button>
 
             <button
               type="button"
-              onClick={() => setShowDirect(!showDirect)}
-              className="flex items-center gap-2 rounded-lg border border-[var(--border-color)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--hover-bg)]"
+              onClick={() => {
+                setShowDirect(!showDirect);
+                setShowTest(false);
+              }}
+              className="flex items-center gap-2 rounded-2xl border border-[var(--border-color)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-all hover:bg-[var(--hover-bg)]"
             >
               <UserPlus size={16} />
               Direct Send
@@ -400,7 +613,7 @@ export default function ComposerPage() {
 
           {/* Test Email Panel */}
           {showTest && (
-            <div className="rounded-xl border border-[var(--accent-blue)]/20 bg-[var(--bg-card)] p-5">
+            <div className="animate-fade-up rounded-2xl border border-blue-500/20 bg-[var(--bg-card)] p-5">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                   Send Test Email
@@ -411,7 +624,7 @@ export default function ComposerPage() {
                     setShowTest(false);
                     setTestResults(null);
                   }}
-                  className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+                  className="rounded-lg p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)]"
                 >
                   <X size={16} />
                 </button>
@@ -428,51 +641,25 @@ export default function ComposerPage() {
                   type="button"
                   onClick={handleTestSend}
                   disabled={testLoading}
-                  className="flex items-center gap-2 rounded-lg bg-[var(--accent-blue)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-30"
+                  className="flex items-center gap-2 rounded-xl bg-[var(--accent-blue)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-30"
                 >
                   <FlaskConical size={14} />
                   {testLoading ? "Sending..." : "Send"}
                 </button>
               </div>
-              <p className="mt-2 text-xs text-[var(--text-muted)]">
-                Subject will be prefixed with [TEST]. Template variables replaced
-                with test values.
+              <p className="mt-2 text-[11px] text-[var(--text-muted)]">
+                Subject prefixed with [TEST]. Template variables use test values.
               </p>
-              {testResults && (
-                <div className="mt-3 space-y-2">
-                  {testResults.map((r) => (
-                    <div
-                      key={r.email}
-                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${
-                        r.success
-                          ? "bg-green-500/5 text-[var(--accent-green)]"
-                          : "bg-red-500/5 text-[var(--accent-red)]"
-                      }`}
-                    >
-                      {r.success ? (
-                        <CheckCircle size={14} />
-                      ) : (
-                        <AlertCircle size={14} />
-                      )}
-                      {r.email}
-                      {r.error && (
-                        <span className="text-xs opacity-70">
-                          — {r.error}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+              {testResults && <ResultList results={testResults} />}
             </div>
           )}
 
           {/* Direct Send Panel */}
           {showDirect && (
-            <div className="rounded-xl border border-[var(--accent-orange)]/20 bg-[var(--bg-card)] p-5">
+            <div className="animate-fade-up rounded-2xl border border-amber-500/20 bg-[var(--bg-card)] p-5">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                  Direct Send to Custom Emails
+                  Direct Send
                 </h3>
                 <button
                   type="button"
@@ -480,7 +667,7 @@ export default function ComposerPage() {
                     setShowDirect(false);
                     setDirectResults(null);
                   }}
-                  className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+                  className="rounded-lg p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--hover-bg)]"
                 >
                   <X size={16} />
                 </button>
@@ -497,64 +684,45 @@ export default function ComposerPage() {
                   type="button"
                   onClick={handleDirectSend}
                   disabled={directLoading}
-                  className="flex items-center gap-2 rounded-lg bg-[var(--accent-orange)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-30"
+                  className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-30"
                 >
                   <Send size={14} />
                   {directLoading ? "Sending..." : "Send"}
                 </button>
               </div>
-              <p className="mt-2 text-xs text-[var(--text-muted)]">
-                Sends the real email (no [TEST] prefix) directly to these
-                addresses. Bypasses broadcast queue and warmup limits.
+              <p className="mt-2 text-[11px] text-[var(--text-muted)]">
+                Sends the real email (no [TEST] prefix) directly. Bypasses
+                broadcast queue.
               </p>
-              {directResults && (
-                <div className="mt-3 space-y-2">
-                  {directResults.map((r) => (
-                    <div
-                      key={r.email}
-                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${
-                        r.success
-                          ? "bg-green-500/5 text-[var(--accent-green)]"
-                          : "bg-red-500/5 text-[var(--accent-red)]"
-                      }`}
-                    >
-                      {r.success ? (
-                        <CheckCircle size={14} />
-                      ) : (
-                        <AlertCircle size={14} />
-                      )}
-                      {r.email}
-                      {r.error && (
-                        <span className="text-xs opacity-70">
-                          — {r.error}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+              {directResults && <ResultList results={directResults} />}
             </div>
           )}
 
           {/* Broadcast Progress */}
           {progress && (
-            <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+            <div className="animate-fade-up rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-[var(--text-primary)]">
                   Broadcast:{" "}
-                  <span className="text-[var(--accent-blue)]">
+                  <span
+                    className={
+                      progress.broadcast.status === "sent"
+                        ? "text-emerald-400"
+                        : "text-[var(--accent-blue)]"
+                    }
+                  >
                     {progress.broadcast.status}
                   </span>
                 </p>
-                <p className="text-sm text-[var(--text-secondary)]">
+                <p className="text-xs tabular-nums text-[var(--text-muted)]">
                   {progress.counts.sent}/{progress.total} sent
                   {progress.counts.failed > 0 &&
-                    `, ${progress.counts.failed} failed`}
+                    ` \u00B7 ${progress.counts.failed} failed`}
                 </p>
               </div>
-              <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-[var(--bg-input)]">
+              <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/[0.04]">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-green)] transition-all"
+                  className="h-full rounded-full bg-gradient-to-r from-[var(--accent-blue)] to-emerald-400 transition-all duration-500"
                   style={{
                     width: `${
                       progress.total
@@ -566,29 +734,25 @@ export default function ComposerPage() {
                   }}
                 />
               </div>
-              <p className="mt-2 text-xs text-[var(--text-muted)]">
-                Sending ramps per the warmup schedule; large lists send over
-                several days.
-              </p>
             </div>
           )}
         </div>
 
         {/* Preview column */}
         {showPreview && (
-          <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+            <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
               Email Preview
             </h3>
             {subject && (
-              <div className="mb-4 rounded-lg bg-[var(--bg-primary)] px-4 py-3">
-                <p className="text-xs text-[var(--text-muted)]">Subject</p>
+              <div className="mb-4 rounded-xl bg-white/[0.03] px-4 py-3">
+                <p className="text-[10px] text-[var(--text-muted)]">Subject</p>
                 <p className="mt-1 text-sm font-medium text-[var(--text-primary)]">
                   {subject}
                 </p>
               </div>
             )}
-            <div className="overflow-hidden rounded-lg bg-white">
+            <div className="overflow-hidden rounded-xl bg-white">
               <div className="p-6">
                 {htmlBody ? (
                   <div
@@ -596,10 +760,7 @@ export default function ComposerPage() {
                     dangerouslySetInnerHTML={{
                       __html: htmlBody
                         .replace(/\{\{first_name\}\}/g, "Daniel")
-                        .replace(
-                          /\{\{email\}\}/g,
-                          "daniel@example.com"
-                        )
+                        .replace(/\{\{email\}\}/g, "daniel@example.com")
                         .replace(/\{\{unsubscribe_url\}\}/g, "#"),
                     }}
                   />
