@@ -49,30 +49,30 @@ export default function AdminLayout({
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-20 bg-black/60 md:hidden"
+          className="fixed inset-0 z-20 bg-black/50 backdrop-blur-sm md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-30 flex h-screen w-[240px] flex-col bg-[var(--bg-sidebar)] transition-transform md:relative md:translate-x-0 ${
+        className={`fixed left-0 top-0 z-30 flex h-screen w-[260px] flex-col border-r border-[var(--border-color)] bg-[var(--bg-sidebar)] transition-transform md:relative md:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Brand */}
-        <div className="flex h-16 items-center gap-3 border-b border-[var(--border-color)] px-6">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--accent-blue)] to-[var(--accent-purple)]">
-            <Mail size={16} className="text-white" />
+        <div className="flex h-[72px] items-center gap-3 px-7">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--accent-blue)] to-[var(--accent-purple)] shadow-lg shadow-[var(--accent-blue)]/20">
+            <Mail size={18} className="text-white" />
           </div>
-          <Link href="/" className="text-base font-semibold text-white">
-            Daniel Philip
+          <Link href="/" className="text-[15px] font-semibold text-[var(--text-primary)]">
+            DP Marketing
           </Link>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4">
-          <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
+        <nav className="flex-1 px-4 py-2">
+          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)]">
             Menu
           </p>
           <div className="space-y-1">
@@ -83,13 +83,13 @@ export default function AdminLayout({
                   key={item.href}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all ${
+                  className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-[13px] font-medium transition-all duration-200 ${
                     active
-                      ? "bg-gradient-to-r from-[var(--accent-blue)] to-[var(--accent-purple)] text-white shadow-lg shadow-[var(--accent-blue)]/20"
+                      ? "bg-[var(--accent-blue)]/12 text-[var(--accent-blue)] shadow-sm"
                       : "text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]"
                   }`}
                 >
-                  <item.icon size={18} />
+                  <item.icon size={18} strokeWidth={active ? 2.2 : 1.8} />
                   {item.label}
                 </Link>
               );
@@ -98,12 +98,12 @@ export default function AdminLayout({
         </nav>
 
         {/* Logout */}
-        <div className="border-t border-[var(--border-color)] p-3">
+        <div className="border-t border-[var(--border-color)] p-4">
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-[var(--text-muted)] transition-all hover:bg-[var(--hover-bg)] hover:text-[var(--accent-red)]"
+            className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-[13px] font-medium text-[var(--text-muted)] transition-all duration-200 hover:bg-red-500/8 hover:text-[var(--accent-red)]"
           >
-            <LogOut size={18} />
+            <LogOut size={18} strokeWidth={1.8} />
             Logout
           </button>
         </div>
@@ -112,21 +112,23 @@ export default function AdminLayout({
       {/* Main content */}
       <main className="flex-1 overflow-auto">
         {/* Top header bar */}
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-primary)]/80 px-6 backdrop-blur-md">
+        <header className="sticky top-0 z-10 flex h-[64px] items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-primary)]/80 px-6 backdrop-blur-xl">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-[var(--text-secondary)] md:hidden"
+            className="rounded-xl p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--hover-bg)] md:hidden"
           >
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
           <div className="hidden md:block" />
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[var(--accent-blue)] to-[var(--accent-purple)]" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[var(--accent-blue)] to-[var(--accent-purple)] text-xs font-semibold text-white">
+              DP
+            </div>
           </div>
         </header>
 
         {/* Page content */}
-        <div className="p-6 md:p-8">{children}</div>
+        <div className="p-5 md:p-8">{children}</div>
       </main>
     </div>
   );
