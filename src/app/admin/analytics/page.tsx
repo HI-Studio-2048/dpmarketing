@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Mail, Eye, MousePointerClick, UserMinus, TrendingUp, ShieldCheck } from "lucide-react";
+import { Mail, Eye, MousePointerClick, UserMinus, TrendingUp, ShieldCheck, BarChart3 } from "lucide-react";
+
+interface DailyStats {
+  [date: string]: { sent: number; opened: number; clicked: number };
+}
 
 interface Analytics {
   totalEmails: number;
@@ -17,6 +21,7 @@ interface Analytics {
   clickRate: number;
   bounceRate: number;
   deliveryRate: number;
+  dailyStats: DailyStats;
 }
 
 export default function AnalyticsPage() {
@@ -153,6 +158,9 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
+      {/* Daily Emails Sent & Open Rate */}
+      <DailyChart dailyStats={analytics.dailyStats} />
+
       {/* Delivery & Metrics */}
       <div className="grid gap-5 md:grid-cols-2">
         <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-6">
@@ -213,6 +221,166 @@ export default function AnalyticsPage() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Daily Sent & Open Rate Chart ── */
+
+function DailyChart({ dailyStats }: { dailyStats: DailyStats }) {
+  // Build last 30 days, filling gaps with zeros
+  const days: { date: string; label: string; sent: number; opened: number; openRate: number }[] = [];
+  const now = new Date();
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const iso = d.toISOString().split("T")[0];
+    const stats = dailyStats?.[iso];
+    const sent = stats?.sent || 0;
+    const opened = stats?.opened || 0;
+    days.push({
+      date: iso,
+      label: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      sent,
+      opened,
+      openRate: sent > 0 ? Math.round((opened / sent) * 100) : 0,
+    });
+  }
+
+  const maxSent = Math.max(...days.map((d) => d.sent), 1);
+  const totalSent = days.reduce((s, d) => s + d.sent, 0);
+  const totalOpened = days.reduce((s, d) => s + d.opened, 0);
+  const avgOpenRate = totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0;
+
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const hovered = hoveredIdx !== null ? days[hoveredIdx] : null;
+
+  return (
+    <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-6">
+      {/* Header */}
+      <div className="mb-5 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/10">
+            <BarChart3 size={15} className="text-purple-400" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+              Daily Activity
+            </h2>
+            <p className="text-[11px] text-[var(--text-muted)]">Last 30 days</p>
+          </div>
+        </div>
+
+        {/* Summary pills */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 rounded-full bg-blue-500/10 px-3 py-1.5">
+            <span className="h-2 w-2 rounded-full bg-blue-400" />
+            <span className="text-[11px] font-medium text-blue-400">
+              {totalSent} sent
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1.5">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            <span className="text-[11px] font-medium text-emerald-400">
+              {avgOpenRate}% open rate
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Tooltip */}
+      <div className="mb-2 h-8 flex items-center">
+        {hovered ? (
+          <div className="flex items-center gap-4 animate-fade-up">
+            <span className="text-xs font-medium text-[var(--text-primary)]">
+              {hovered.label}
+            </span>
+            <span className="text-xs text-blue-400">
+              {hovered.sent} sent
+            </span>
+            <span className="text-xs text-emerald-400">
+              {hovered.opened} opened
+            </span>
+            <span className="text-xs text-amber-400">
+              {hovered.openRate}% open rate
+            </span>
+          </div>
+        ) : (
+          <span className="text-[11px] text-[var(--text-muted)]">
+            Hover over bars for details
+          </span>
+        )}
+      </div>
+
+      {/* Chart */}
+      <div className="flex items-end gap-[3px]" style={{ height: 160 }}>
+        {days.map((day, idx) => {
+          const barH = Math.max(4, (day.sent / maxSent) * 140);
+          const openedH = day.sent > 0 ? (day.opened / day.sent) * barH : 0;
+          const isHovered = hoveredIdx === idx;
+
+          return (
+            <div
+              key={day.date}
+              className="group relative flex flex-1 flex-col items-center justify-end"
+              style={{ height: 160 }}
+              onMouseEnter={() => setHoveredIdx(idx)}
+              onMouseLeave={() => setHoveredIdx(null)}
+            >
+              {/* Open rate dot */}
+              {day.sent > 0 && (
+                <div
+                  className={`absolute z-10 h-2 w-2 rounded-full transition-all duration-200 ${
+                    isHovered ? "bg-emerald-400 scale-150" : "bg-emerald-400/60"
+                  }`}
+                  style={{ bottom: barH + 4 }}
+                />
+              )}
+
+              {/* Sent bar (full) */}
+              <div
+                className={`relative w-full rounded-t-sm transition-all duration-200 ${
+                  isHovered ? "bg-blue-400" : "bg-blue-500/40"
+                }`}
+                style={{ height: barH }}
+              >
+                {/* Opened overlay */}
+                {openedH > 0 && (
+                  <div
+                    className={`absolute bottom-0 left-0 w-full rounded-t-sm transition-all duration-200 ${
+                      isHovered ? "bg-emerald-400" : "bg-emerald-500/50"
+                    }`}
+                    style={{ height: openedH }}
+                  />
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* X-axis labels */}
+      <div className="mt-2 flex justify-between">
+        <span className="text-[10px] text-[var(--text-muted)]">{days[0]?.label}</span>
+        <span className="text-[10px] text-[var(--text-muted)]">{days[14]?.label}</span>
+        <span className="text-[10px] text-[var(--text-muted)]">{days[29]?.label}</span>
+      </div>
+
+      {/* Legend */}
+      <div className="mt-4 flex items-center gap-5 border-t border-[var(--border-color)] pt-4">
+        <div className="flex items-center gap-1.5">
+          <div className="h-3 w-3 rounded-sm bg-blue-500/40" />
+          <span className="text-[11px] text-[var(--text-muted)]">Sent</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="h-3 w-3 rounded-sm bg-emerald-500/50" />
+          <span className="text-[11px] text-[var(--text-muted)]">Opened</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="h-2 w-2 rounded-full bg-emerald-400/60" />
+          <span className="text-[11px] text-[var(--text-muted)]">Open rate</span>
         </div>
       </div>
     </div>
