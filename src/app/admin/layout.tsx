@@ -2,11 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   Menu,
   X,
-  LogOut,
   LayoutDashboard,
   Users,
   Upload,
@@ -21,14 +20,8 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  async function handleLogout() {
-    await fetch("/api/admin/logout", { method: "POST" });
-    router.push("/admin-login");
-  }
 
   const navItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -97,16 +90,7 @@ export default function AdminLayout({
           </div>
         </nav>
 
-        {/* Logout */}
-        <div className="border-t border-[var(--border-color)] p-4">
-          <button
-            onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-[13px] font-medium text-[var(--text-muted)] transition-all duration-200 hover:bg-red-500/8 hover:text-[var(--accent-red)]"
-          >
-            <LogOut size={18} strokeWidth={1.8} />
-            Logout
-          </button>
-        </div>
+        <div className="h-4" />
       </aside>
 
       {/* Main content */}

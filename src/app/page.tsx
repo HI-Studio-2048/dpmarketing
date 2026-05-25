@@ -17,7 +17,7 @@ export default function Home() {
               Quiz
             </Link>
             <Link
-              href="/admin-login"
+              href="/admin"
               className="text-sm tracking-wider uppercase text-[#121212]/60 hover:text-[#121212]"
             >
               Admin
