@@ -16,7 +16,7 @@ import { enqueueBroadcast } from "@/lib/broadcast-queue";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { subject, html_body, segment_json } = body;
+    const { subject, html_body, segment_json, attachments } = body;
 
     if (!subject || !html_body) {
       return NextResponse.json(
@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
         subject,
         html_body,
         segment_json: segment_json || {},
+        attachments_json: attachments || null,
         status: "sending",
       })
       .select()

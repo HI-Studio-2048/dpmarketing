@@ -77,6 +77,7 @@ create table public.broadcasts (
     subject text not null,
     html_body text not null,
     segment_json jsonb not null default '{}'::jsonb,
+    attachments_json jsonb default null,
     status text not null default 'draft',
     sent_at timestamptz,
     recipient_count integer,

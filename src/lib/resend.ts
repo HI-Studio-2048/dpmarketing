@@ -11,11 +11,18 @@ export const EMAIL_FROM =
 export const RESEND_WEBHOOK_SECRET =
   process.env.RESEND_WEBHOOK_SECRET || "";
 
+export interface Attachment {
+  filename: string;
+  content: string; // base64
+  type: string;
+}
+
 export interface BatchMessage {
   to: string;
   subject: string;
   html: string;
   headers?: Record<string, string>;
+  attachments?: Attachment[];
 }
 
 export interface BatchResult {
@@ -38,6 +45,11 @@ export async function sendBatch(messages: BatchMessage[]): Promise<BatchResult[]
       subject: m.subject,
       html: m.html,
       headers: m.headers,
+      attachments: m.attachments?.map((a) => ({
+        filename: a.filename,
+        content: Buffer.from(a.content, "base64"),
+        content_type: a.type,
+      })),
     }));
 
     try {

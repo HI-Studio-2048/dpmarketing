@@ -19,6 +19,9 @@ import {
   Layers,
   Monitor,
   Loader2,
+  Paperclip,
+  FileIcon,
+  Trash2,
 } from "lucide-react";
 
 const RichEditor = dynamic(() => import("@/components/rich-editor"), {
@@ -126,6 +129,12 @@ export default function ComposerPage() {
   const [testLoading, setTestLoading] = useState(false);
   const [testResults, setTestResults] = useState<TestResult[] | null>(null);
 
+  // Attachments
+  const [attachments, setAttachments] = useState<
+    { filename: string; content: string; type: string; size: number }[]
+  >([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Direct send
   const [showDirect, setShowDirect] = useState(false);
   const [directEmails, setDirectEmails] = useState("");
@@ -144,6 +153,37 @@ export default function ComposerPage() {
     if (segExcludeBounced) segment.exclude_bounced = true;
     return segment;
   }, [segStatus, segSource, segPlatform, segTags, segDateFrom, segDateTo, segCountry, segExcludeBounced]);
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`${file.name} is too large (max 10MB)`);
+        continue;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        setAttachments((prev) => [
+          ...prev,
+          { filename: file.name, content: base64, type: file.type, size: file.size },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    }
+    e.target.value = "";
+  }
+
+  function removeAttachment(idx: number) {
+    setAttachments((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function formatFileSize(bytes: number) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
 
   // Debounced audience count
   useEffect(() => {
@@ -210,6 +250,7 @@ export default function ComposerPage() {
           subject,
           html_body: htmlBody,
           segment_json: buildSegment(),
+          attachments: attachments.length > 0 ? attachments : undefined,
         }),
       });
       const data = await response.json();
@@ -246,7 +287,12 @@ export default function ComposerPage() {
       const response = await fetch("/api/admin/test-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: emails, subject, html_body: htmlBody }),
+        body: JSON.stringify({
+          to: emails,
+          subject,
+          html_body: htmlBody,
+          attachments: attachments.length > 0 ? attachments : undefined,
+        }),
       });
       const data = await response.json();
       setTestResults(data.results || []);
@@ -288,6 +334,7 @@ export default function ComposerPage() {
           subject,
           html_body: htmlBody,
           test: false,
+          attachments: attachments.length > 0 ? attachments : undefined,
         }),
       });
       const data = await response.json();
@@ -570,6 +617,65 @@ export default function ComposerPage() {
               </div>
             </div>
             <RichEditor content={htmlBody} onChange={setHtmlBody} />
+          </div>
+
+          {/* Attachments */}
+          <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <label className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                Attachments
+              </label>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1.5 rounded-xl bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] ring-1 ring-[var(--border-color)] transition-all hover:bg-white/[0.08] hover:text-[var(--text-primary)]"
+              >
+                <Paperclip size={13} />
+                Add File
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+            </div>
+            {attachments.length > 0 ? (
+              <div className="space-y-2">
+                {attachments.map((file, idx) => (
+                  <div
+                    key={`${file.filename}-${idx}`}
+                    className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5 ring-1 ring-[var(--border-color)]"
+                  >
+                    <FileIcon size={16} className="shrink-0 text-[var(--accent-blue)]" />
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-sm font-medium text-[var(--text-primary)]">
+                        {file.filename}
+                      </p>
+                      <p className="text-[11px] text-[var(--text-muted)]">
+                        {formatFileSize(file.size)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(idx)}
+                      className="shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-rose-500/10 hover:text-rose-400"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  {attachments.length} file{attachments.length > 1 ? "s" : ""} &middot;{" "}
+                  {formatFileSize(attachments.reduce((s, f) => s + f.size, 0))} total
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-[var(--text-muted)]">
+                No attachments. Max 10MB per file.
+              </p>
+            )}
           </div>
 
           {/* Actions */}

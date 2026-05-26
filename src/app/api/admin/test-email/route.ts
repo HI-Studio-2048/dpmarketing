@@ -13,7 +13,7 @@ import { resend, EMAIL_FROM } from "@/lib/resend";
  */
 export async function POST(request: NextRequest) {
   try {
-    const { to, subject, html_body, test = true } = await request.json();
+    const { to, subject, html_body, test = true, attachments } = await request.json();
 
     if (!to || !Array.isArray(to) || to.length === 0) {
       return NextResponse.json(
@@ -29,6 +29,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Build Resend attachments array
+    const resendAttachments = attachments?.map(
+      (a: { filename: string; content: string; type: string }) => ({
+        filename: a.filename,
+        content: Buffer.from(a.content, "base64"),
+        content_type: a.type,
+      })
+    );
+
     const results = [];
 
     for (const email of to) {
@@ -43,6 +52,7 @@ export async function POST(request: NextRequest) {
           to: [email],
           subject: test ? `[TEST] ${subject}` : subject,
           html,
+          attachments: resendAttachments,
         });
 
         results.push({

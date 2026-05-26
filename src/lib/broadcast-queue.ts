@@ -1,6 +1,6 @@
 // src/lib/broadcast-queue.ts
 import { supabase } from "./supabase-server";
-import { sendBatch, type BatchMessage } from "./resend";
+import { sendBatch, type BatchMessage, type Attachment } from "./resend";
 import { chunk } from "./chunk";
 import { detectCountry, COUNTRY_PREFIXES } from "./phone-country";
 
@@ -187,14 +187,14 @@ export async function drainOnce(): Promise<DrainResult> {
     await supabase.from("email_settings").update({ warmup_started_on: today }).eq("id", true);
   }
 
-  // Fetch the broadcast subject/body for the claimed rows.
+  // Fetch the broadcast subject/body/attachments for the claimed rows.
   const broadcastIds = [...new Set(batch.map((r) => r.broadcast_id))];
   const { data: broadcasts } = await supabase
     .from("broadcasts")
-    .select("id, subject, html_body")
+    .select("id, subject, html_body, attachments_json")
     .in("id", broadcastIds);
   const byId = new Map(
-    (broadcasts || []).map((b: { id: string; subject: string; html_body: string }) => [b.id, b])
+    (broadcasts || []).map((b: { id: string; subject: string; html_body: string; attachments_json?: unknown }) => [b.id, b])
   );
 
   let sent = 0;
@@ -208,11 +208,13 @@ export async function drainOnce(): Promise<DrainResult> {
       .replace(/{{first_name}}/g, r.first_name || "")
       .replace(/{{email}}/g, r.email)
       .replace(/{{unsubscribe_url}}/g, unsubscribeUrl);
+    const attachments = (b as { attachments_json?: Attachment[] })?.attachments_json || undefined;
     return {
       to: r.email,
       subject: b?.subject || "",
       html,
       headers: { "List-Unsubscribe": `<${unsubscribeUrl}>` },
+      attachments,
     };
   });
 
